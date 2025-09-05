@@ -48,6 +48,12 @@ services:
         target: /home/devvy/.claude
         # read_only: true # These files need to be writable for Claude Code to work
 
+      # VS Code configuration (version controlled)
+      - type: bind
+        source: ./vscode-config
+        target: /home/devvy/vscode-config
+        read_only: true
+
       # Git config (read-only)
       - type: bind
         source: ${HOME}/.gitconfig
@@ -72,6 +78,9 @@ services:
       - npm-cache:/home/devvy/.npm
       - pnpm-store:/home/devvy/.local/share/pnpm
       - claude-code-data:/home/devvy/.local/share/claude-code
+      # VS Code Server persistence (extensions, settings, etc.)
+      - vscode-server:/home/devvy/.vscode-server
+      - vscode-server-insiders:/home/devvy/.vscode-server-insiders
     environment:
       USER_ID: ${USER_ID:-1000}
       GROUP_ID: ${GROUP_ID:-1000}
@@ -101,3 +110,5 @@ volumes:
   npm-cache:
   pnpm-store:
   claude-code-data:
+  vscode-server:
+  vscode-server-insiders:

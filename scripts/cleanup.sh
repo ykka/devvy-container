@@ -22,6 +22,6 @@ done
 # mkdir -p secrets
 
 # Remove environment files
-rm -f .env .env.local
+# rm -f .env .env.local
 
 echo "✅ Cleanup complete! You can now run ./scripts/setup.sh"
