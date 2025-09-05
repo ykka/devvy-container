@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  claude-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    container_name: claude-dev
+    hostname: claude-dev
+    cap_add:
+      - NET_ADMIN  # For firewall rules
+      - NET_RAW    # For iptables
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "2222:22"                    # SSH
+      - "60000-60010:60000-60010/udp" # Mosh
+      - "3000-3010:3000-3010"        # Dev servers
+    volumes:
+      # Your CloudSpace directory with worktrees inside
+      - type: bind
+        source: ${HOME}/Repos/claudespace
+        target: /home/devvy/claudespace
+        consistency: delegated  # Mac optimization
+
+      # Your config files (read-only to prevent modifications)
+      - type: bind
+        source: ${HOME}/.config/nvim
+        target: /home/devvy/.config/nvim
+        read_only: true
+
+      - type: bind
+        source: ${HOME}/.zshrc
+        target: /home/devvy/.zshrc
+        read_only: true
+
+      - type: bind
+        source: ${HOME}/.config/tmux
+        target: /home/devvy/.config/tmux
+        read_only: true
+
+      # Claude config including MCP settings
+      - type: bind
+        source: ${HOME}/.claude
+        target: /home/devvy/.claude
+        # read_only: true # These files need to be writable for Claude Code to work
+
+      # Git config (read-only)
+      - type: bind
+        source: ${HOME}/.gitconfig
+        target: /home/devvy/.gitconfig
+        read_only: true
+
+      # Container SSH key (specific key, not all keys)
+      - type: bind
+        source: ./secrets/container_rsa
+        target: /home/devvy/.ssh/container_rsa
+        read_only: true
+
+      # Authorized keys for SSH access
+      - type: bind
+        source: ./secrets
+        target: /secrets
+        read_only: true
+
+      # Persistent data
+      - nvim-data:/home/devvy/.local/share/nvim
+      - zsh-history:/home/devvy/.local/share/zsh
+      - npm-cache:/home/devvy/.npm
+      - pnpm-store:/home/devvy/.local/share/pnpm
+      - claude-code-data:/home/devvy/.local/share/claude-code
+    environment:
+      USER_ID: ${USER_ID:-1000}
+      GROUP_ID: ${GROUP_ID:-1000}
+      GIT_USER_NAME: ${GIT_USER_NAME}
+      GIT_USER_EMAIL: ${GIT_USER_EMAIL}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      LINEAR_API_KEY: ${LINEAR_API_KEY}
+      # Database URLs (if needed)
+      DATABASE_URL: ${DATABASE_URL}
+      MONGODB_URI: ${MONGODB_URI}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      # Enable Playwright support
+      ENABLE_PLAYWRIGHT: ${ENABLE_PLAYWRIGHT:-false}
+      PLAYWRIGHT_BROWSERS_PATH: /home/devvy/.cache/ms-playwright
+    networks:
+      - claude-network
+    restart: unless-stopped
+
+networks:
+  claude-network:
+    driver: bridge
+
+volumes:
+  nvim-data:
+  zsh-history:
+  npm-cache:
+  pnpm-store:
+  claude-code-data:
