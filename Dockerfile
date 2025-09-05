@@ -75,15 +75,14 @@ RUN git clone --depth 1 --branch stable https://github.com/neovim/neovim.git /tm
     rm -rf /tmp/neovim
 
 # Install Claude Code
-RUN curl -fsSL https://github.com/anthropics/claude-code/releases/latest/download/claude-linux-x64.tar.gz | tar -xz -C /usr/local/bin && \
-    chmod +x /usr/local/bin/claude-code
+RUN npm install -g @anthropic-ai/claude-code
 
 # Switch to devvy user
 USER devvy
 WORKDIR /home/devvy
 
 # Install Python packages for Neovim
-RUN pip3 install --user pynvim
+RUN pip3 install --user --break-system-packages pynvim
 
 # Create directory structure
 RUN mkdir -p ~/claudespace/worktrees ~/.ssh ~/.config ~/.claude && \
