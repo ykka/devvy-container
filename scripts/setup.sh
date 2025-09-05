@@ -120,10 +120,10 @@ echo ""
 echo "🔨 Building Docker image..."
 docker-compose build
 
-# Start the container
+# Recreate container with new image if it changed
 echo ""
 echo "🚀 Starting container..."
-docker-compose up -d
+docker-compose up -d --force-recreate
 
 # Wait for container to be ready
 echo "⏳ Waiting for container initialization..."
