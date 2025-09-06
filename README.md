@@ -1,8 +1,107 @@
 # Claude Docker Development Environment
 
-A containerized development environment that provides a consistent, isolated workspace with Claude Code, Neovim, and full development tooling. Connect via Cursor/VS Code for a seamless remote development experience.
+**Tested on macOS with Cursor IDE**
 
-## 🎯 Purpose
+> An exploration in secure AI-assisted development: Running Claude Code safely in an isolated Docker container while maintaining a productive development workflow.
+
+## Why This Exists: The Security Challenge
+
+When running Claude Code directly on your host machine, you're essentially giving an AI system unrestricted access to execute commands. Anthropic themselves warns about this:
+
+> *"Letting Claude run arbitrary commands is risky and can result in data loss, system corruption, or even data exfiltration (e.g., via prompt injection attacks)"* — [Anthropic Security Documentation](https://docs.anthropic.com/en/docs/security/web-artifacts#claude-code)
+
+### The Official Recommendation
+
+Anthropic recommends:
+> *"To minimize these risks, use --dangerously-skip-permissions in a container without internet access. You can follow this reference implementation using Docker Dev Containers."*
+
+Even with containers, they caution:
+> *"While the devcontainer provides substantial protections, no system is completely immune to all attacks. When executed with --dangerously-skip-permissions, devcontainers do not prevent a malicious project from exfiltrating anything accessible in the devcontainer including Claude Code credentials."*
+
+## This Solution: Best of Both Worlds
+
+This repository represents my exploration of an optimal setup that balances:
+
+- **Security**: Claude Code runs in an isolated container with limited access to your host system
+- **Productivity**: Full VS Code/Cursor integration with all your familiar tools and settings
+- **Functionality**: Complete development environment with Node.js, Python, build tools, and more
+- **Flexibility**: Your projects remain on your host machine, accessible through volume mounts
+
+### Key Design Decisions
+
+1. **Containerized Claude Code**: Runs exclusively inside Docker, never touching your host directly
+2. **Selective Volume Mounts**: Only specific directories are accessible to the container
+3. **Network Isolation Options**: Can be configured for restricted internet access
+4. **Persistent Development State**: Docker volumes preserve your tools, caches, and configurations
+5. **Remote Development**: Use Cursor/VS Code's remote container features for a native experience
+
+## Important Caveats
+
+### The Trade-offs
+
+While this setup significantly improves security, there are some limitations:
+
+- **No Visual Browser Automation**: Playwright and similar tools run headlessly - you can't watch the browser or intervene visually
+- **Build Inside Container**: All `npm install`, builds, and development servers must run inside the container (this is actually a feature for consistency!)
+- **Binary Compatibility**: Node modules are compiled for Linux, not macOS - never run `npm install` on the host
+- **SSH Key Management**: Requires separate SSH keys for container Git operations
+
+### When This Setup Shines
+
+- Working with untrusted or experimental code
+- Testing packages with native dependencies
+- Maintaining consistent development environments across projects
+- Isolating Claude Code from sensitive host data
+- Running Linux-specific tools on macOS
+
+### When You Might Want Something Else
+
+- Need to watch browser automation visually
+- Require direct hardware access (USB devices, etc.)
+- Working with macOS-specific development (iOS apps, etc.)
+- Need maximum performance for compute-intensive tasks
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────┐
+│               Your Mac (Host)                    │
+│                                                  │
+│  ┌─────────────────┐  ┌──────────────────────┐ │
+│  │   Cursor IDE    │  │    Your Projects     │ │
+│  │                 │  │  ~/repos/claudespace  │ │
+│  └────────┬────────┘  └────────┬─────────────┘ │
+│           │                     │               │
+│           └──────────┬──────────┘               │
+│                      │                          │
+│         Docker Remote Connection                │
+│                      │                          │
+└──────────────────────┼──────────────────────────┘
+                       │
+┌──────────────────────┼──────────────────────────┐
+│                      ▼                          │
+│         Docker Container (Linux)                │
+│                                                 │
+│  ┌───────────────────────────────────────────┐ │
+│  │           Claude Code                     │ │
+│  │   (--dangerously-skip-permissions)        │ │
+│  └───────────────────────────────────────────┘ │
+│                                                 │
+│  ┌──────────┐ ┌────────┐ ┌─────────────────┐ │
+│  │ Node.js  │ │ Python │ │ Build Tools     │ │
+│  └──────────┘ └────────┘ └─────────────────┘ │
+│                                                 │
+│  Mounted: ~/repos/claudespace                  │
+│        → /home/devvy/claudespace               │
+│  Isolated: System files, credentials           │
+└─────────────────────────────────────────────────┘
+```
+
+## Getting Started
+
+> **Note:** This setup uses your existing VS Code/Cursor configuration files (`settings.json`, `keybindings.json`, `extensions.txt`). During setup, you can choose to import these from your local installation.
+
+## Purpose
 
 This Docker environment solves several critical development challenges:
 
@@ -12,7 +111,7 @@ This Docker environment solves several critical development challenges:
 - **Claude Code Integration**: Run Claude Code safely in an isolated environment
 - **Remote Development**: Full Cursor/VS Code integration with proper IntelliSense and debugging
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 claude-docker/
@@ -21,22 +120,23 @@ claude-docker/
 ├── .env                      # Environment variables (create from .env.example)
 ├── .env.example             # Environment variables template
 ├── .gitignore               # Git ignore rules
-├── scripts/
+├── setup-scripts/            # Host-side setup scripts
 │   ├── setup.sh             # Initial setup and build script
-│   ├── docker-entrypoint.sh # Container initialization
-│   ├── init-firewall.sh    # Security/firewall setup
-│   ├── create-worktree.sh  # Git worktree helper
+│   ├── cleanup.sh           # Clean up containers and volumes
 │   └── install-vscode-extensions.sh # Extension installer
+├── container-scripts/        # Container-side scripts  
+│   ├── docker-entrypoint.sh # Container initialization
+│   └── init-firewall.sh     # Security/firewall setup
 ├── secrets/                  # SSH keys (git-ignored)
 │   ├── container_rsa        # Container's SSH private key
 │   └── container_rsa.pub    # Container's SSH public key
 └── vscode-config/           # Cursor/VS Code configuration
-    ├── settings.json        # Editor settings
-    ├── extensions.txt       # Extension list
-    └── keybindings.json    # Custom keybindings
+    ├── settings.json        # Editor settings (your custom settings)
+    ├── extensions.txt       # Extension list (your extensions)
+    └── keybindings.json    # Custom keybindings (your keybindings)
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -48,8 +148,8 @@ claude-docker/
 
 1. **Clone this repository:**
    ```bash
-   git clone <your-repo-url> ~/Repos/claude-docker
-   cd ~/Repos/claude-docker
+   git clone <your-repo-url> ~/<your-repos-directory>/claude-docker
+   cd ~/<your-repos-directory>/claude-docker
    ```
 
 2. **Create your environment file:**
@@ -63,9 +163,10 @@ claude-docker/
 
 3. **Run the setup script:**
    ```bash
-   ./scripts/setup.sh
+   ./setup-scripts/setup.sh
    ```
    This will:
+   - Ask if you want to import your VS Code/Cursor settings
    - Build the Docker image with your user ID/group ID
    - Generate SSH keys for container access
    - Start the container
@@ -77,7 +178,7 @@ claude-docker/
    # Should show 'claude-dev' container running
    ```
 
-## 🔌 Connecting Cursor to the Container
+## Connecting Cursor to the Container
 
 ### Method 1: Attach to Running Container (Recommended)
 
@@ -163,7 +264,7 @@ The Docker container runs Debian Linux with:
 
 ```yaml
 # Project files (read-write)
-~/Repos/claudespace → /home/devvy/claudespace
+~/<your-repos-directory>/claudespace → /home/devvy/claudespace
 
 # Configuration (read-only, from host)
 ~/.config/nvim → /home/devvy/.config/nvim
@@ -221,13 +322,13 @@ Or when connected via Cursor:
 - ❌ **DON'T**: Run `npm install` on your Mac in the mounted folders
 - ❌ **DON'T**: Mix node_modules between host and container
 
-## 🛠️ Daily Workflow
+## Daily Workflow
 
 ### Starting Your Day
 
 ```bash
 # Start the container (if not running)
-cd ~/Repos/claude-docker
+cd ~/<your-repos-directory>/claude-docker
 docker-compose start
 
 # Option 1: Connect via Cursor
@@ -244,7 +345,7 @@ tmux attach -t main || tmux new -s main
 
 ### Working on Projects
 
-1. **All your projects** live in `~/Repos/claudespace/` on your Mac
+1. **All your projects** live in `~/<your-repos-directory>/claudespace/` on your Mac
 2. **Inside container** they're at `/home/devvy/claudespace/`
 3. **File changes** sync instantly (bind mount)
 
@@ -281,7 +382,7 @@ docker-compose stop
 docker-compose down
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables (.env)
 
@@ -299,6 +400,8 @@ LINEAR_API_KEY=lin_api_...  # Linear integration
 ```
 
 ### Cursor/VS Code Settings
+
+> **Important:** The files in `vscode-config/` should be YOUR personal configuration files. During initial setup, the setup script will offer to copy these from your local VS Code/Cursor installation.
 
 - **`vscode-config/settings.json`**: Your editor preferences
 - **`vscode-config/extensions.txt`**: List of extensions to install
@@ -318,7 +421,7 @@ To update settings:
 | 27017 | MongoDB | `mongodb://localhost:27017` |
 | 6379 | Redis | `redis://localhost:6379` |
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Container Won't Start
 
@@ -340,7 +443,7 @@ id -g  # Should match GROUP_ID in .env
 
 # Rebuild with correct IDs
 docker-compose down
-./scripts/setup.sh
+./setup-scripts/setup.sh
 ```
 
 ### Cursor Can't Connect
@@ -378,24 +481,14 @@ lsof -i :3000
 # Kill the process or change the port in docker-compose.yml
 ```
 
-## 📚 Advanced Usage
+## Advanced Usage
 
-### Git Worktrees
-
-Use worktrees to work on multiple branches simultaneously:
-
-```bash
-# Inside container
-cd ~/claudespace/your-repo
-git worktree add worktrees/feature-branch origin/feature-branch
-cd worktrees/feature-branch
-```
 
 ### Multiple Projects
 
 Structure your projects:
 ```
-~/Repos/claudespace/
+~/<your-repos-directory>/claudespace/
 ├── project-a/
 ├── project-b/
 ├── shared-libs/
@@ -413,11 +506,11 @@ Databases running on your Mac are accessible from container:
 ### Custom Scripts
 
 Add scripts to the container:
-1. Create script in `scripts/` directory
+1. Create script in `container-scripts/` directory
 2. Mount it in `docker-compose.yml`
 3. Rebuild: `docker-compose up -d --build`
 
-## 🔄 Maintenance
+## Maintenance
 
 ### Updating the Container
 
@@ -427,12 +520,16 @@ git pull
 
 # Rebuild
 docker-compose down
-./scripts/setup.sh
+./setup-scripts/setup.sh
 ```
 
 ### Cleaning Up
 
 ```bash
+# Use the cleanup script for interactive cleanup
+./setup-scripts/cleanup.sh
+
+# Or manually:
 # Remove container but keep volumes
 docker-compose down
 
@@ -458,18 +555,18 @@ for vol in $(docker volume ls -q | grep claude-docker); do
 done
 ```
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork this repository
 2. Create your feature branch
 3. Test your changes thoroughly
 4. Submit a pull request
 
-## 📝 License
+## License
 
 MIT License - See LICENSE file for details
 
-## 🆘 Support
+## Support
 
 - **Issues**: Open an issue in this repository
 - **Claude Code Issues**: Use `/bug` command in Claude Code

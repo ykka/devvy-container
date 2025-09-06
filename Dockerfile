@@ -11,6 +11,10 @@ RUN apt-get update && apt-get install -y \
     mosh \
     iptables \
     ipset \
+    libcap2-bin \
+    dnsutils \
+    locales \
+    fzf \
     build-essential \
     cmake \
     python3 \
@@ -33,20 +37,25 @@ RUN apt-get update && apt-get install -y \
     xvfb \
     && rm -rf /var/lib/apt/lists/*
 
-# Setup user with matching host UID/GID
+# Configure locales for UTF-8 support (required for mosh)
+RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
+    locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
+# Setup user with matching host UID/GID  
 ARG USER_ID=1000
 ARG GROUP_ID=1000
 
-# Create or reuse group, then create user
-RUN GID_EXISTS=$(getent group ${GROUP_ID} | cut -d: -f1) && \
-    if [ -z "$GID_EXISTS" ]; then \
-        groupadd -g ${GROUP_ID} developer; \
-        GRP_NAME=developer; \
+# Create devvy user (use 2000+ if 1000 conflicts with node user)
+RUN if id -u ${USER_ID} >/dev/null 2>&1; then \
+        # UID exists, use 2000 instead
+        useradd -u 2000 -g users -m -s /bin/zsh devvy; \
     else \
-        GRP_NAME=$GID_EXISTS; \
-        echo "Using existing group $GRP_NAME with GID ${GROUP_ID}"; \
+        # UID doesn't exist, use the provided one
+        useradd -u ${USER_ID} -g users -m -s /bin/zsh devvy; \
     fi && \
-    useradd -u ${USER_ID} -g ${GROUP_ID} -m -s /bin/zsh devvy && \
     echo 'devvy ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 # Configure SSH for remote access (for mosh/ssh from host)
@@ -84,6 +93,11 @@ WORKDIR /home/devvy
 # Install Python packages for Neovim
 RUN pip3 install --user --break-system-packages pynvim
 
+# Install oh-my-zsh
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
+    # Set a nice theme (you can change this to your preference)
+    sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc
+
 # Create directory structure
 RUN mkdir -p ~/claudespace/worktrees ~/.ssh ~/.config ~/.claude && \
     chmod 700 ~/.ssh
@@ -101,9 +115,8 @@ ENV DEVCONTAINER=true
 USER root
 
 # Copy scripts
-COPY scripts/init-firewall.sh /usr/local/bin/init-firewall.sh
-COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-COPY scripts/create-worktree.sh /usr/local/bin/create-worktree.sh
+COPY container-scripts/init-firewall.sh /usr/local/bin/init-firewall.sh
+COPY container-scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/*.sh
 
 # Expose ports for various services:
