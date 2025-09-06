@@ -201,7 +201,6 @@ GIT_USER_EMAIL="you@email.com"
 # Optional (with defaults)
 GITHUB_TOKEN=ghp_...        # For GitHub CLI
 LINEAR_API_KEY=lin_api_...  # For Linear integration
-ENABLE_PLAYWRIGHT=false      # Browser automation support
 ```
 
 The CLI will validate all environment variables and provide helpful error messages if anything is missing or incorrect.

@@ -93,8 +93,6 @@ services:
       MONGODB_URI: ${MONGODB_URI}
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
-      # Enable Playwright support
-      ENABLE_PLAYWRIGHT: ${ENABLE_PLAYWRIGHT:-false}
       PLAYWRIGHT_BROWSERS_PATH: /home/devvy/.cache/ms-playwright
     networks:
       - claude-network

@@ -24,9 +24,6 @@ GROUP_ID=$GROUP_ID
 # Git config (quoted for names with spaces)
 GIT_USER_NAME="$GIT_USER_NAME"
 GIT_USER_EMAIL="$GIT_USER_EMAIL"
-
-# Optional: Enable Playwright support
-ENABLE_PLAYWRIGHT=false
 EOF
 
 echo "Detected configuration:"

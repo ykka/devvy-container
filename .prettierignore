@@ -1,0 +1,7 @@
+dist/
+node_modules/
+*.md
+legacy-bash/
+container-scripts/
+secrets/
+.env*
