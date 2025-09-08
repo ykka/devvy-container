@@ -140,6 +140,9 @@ async function setupVSCodeSync(projectRoot: string): Promise<void> {
 }
 
 async function setupUserConfig(_projectRoot: string): Promise<void> {
+  // Add a small delay to ensure previous operations are fully completed
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
   // Check if config already exists
   let existingConfig: config.UserConfig | null = null;
   if (await config.userConfigExists()) {

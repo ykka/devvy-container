@@ -41,10 +41,10 @@ export async function generateHostSSHKey(): Promise<{
 
   // Generate new key pair
   logger.info('Generating SSH key pair on local machine...');
-  const { stderr } = await execAsync(`ssh-keygen -t rsa -b 4096 -f "${privateKeyPath}" -N "" -C "${CONSTANTS.DOCKER.CONTAINER_NAME}"`);
+  const result = await execAsync('ssh-keygen', ['-t', 'rsa', '-b', '4096', '-f', privateKeyPath, '-N', '', '-C', CONSTANTS.DOCKER.CONTAINER_NAME]);
 
-  if (stderr && !stderr.includes('Generating public/private')) {
-    throw new Error(`Failed to generate SSH key: ${stderr}`);
+  if (!result.success) {
+    throw new Error(`Failed to generate SSH key: ${result.stderr || 'Unknown error'}`);
   }
 
   await fs.chmod(privateKeyPath, 0o600);
@@ -68,7 +68,7 @@ export async function removeContainerSSHKeyFromHostKnownHosts(host = 'localhost'
 
   try {
     // Use ssh-keygen to remove the entry
-    await execAsync(`ssh-keygen -R "${hostPattern}" 2>&1`);
+    await execAsync('ssh-keygen', ['-R', hostPattern]);
     logger.debug("Removed container's SSH key from host's known_hosts");
   } catch {
     // It's okay if the entry doesn't exist
@@ -85,7 +85,7 @@ export async function addContainerSSHKeyToHostKnownHosts(host = 'localhost', por
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
     // Scan for the container's SSH key
-    const { stdout } = await execAsync(`ssh-keyscan -p ${port} -H ${host} 2>/dev/null`);
+    const { stdout } = await execAsync('ssh-keyscan', ['-p', port.toString(), '-H', host]);
 
     if (!stdout) {
       logger.warn("Could not retrieve container's SSH key");
@@ -134,11 +134,11 @@ export async function copyPublicSSHKeyToContainer(containerName: string): Promis
   const authorizedKeysPath = path.join(secretsDir, 'authorized_keys');
 
   // Copy authorized_keys file to container
-  await execAsync(`docker cp "${authorizedKeysPath}" ${containerName}:/home/devvy/.ssh/authorized_keys`);
+  await execAsync('docker', ['cp', authorizedKeysPath, `${containerName}:/home/devvy/.ssh/authorized_keys`]);
 
   // Set proper ownership and permissions
-  await execAsync(`docker exec ${containerName} chown devvy:devvy /home/devvy/.ssh/authorized_keys`);
-  await execAsync(`docker exec ${containerName} chmod 600 /home/devvy/.ssh/authorized_keys`);
+  await execAsync('docker', ['exec', containerName, 'chown', 'devvy:devvy', '/home/devvy/.ssh/authorized_keys']);
+  await execAsync('docker', ['exec', containerName, 'chmod', '600', '/home/devvy/.ssh/authorized_keys']);
 
   logger.debug("Host SSH public key copied to container's authorized_keys");
 }
@@ -182,7 +182,16 @@ export function getSSHConfig(): {
 export async function testSSHConnection(): Promise<boolean> {
   try {
     const config = getSSHConfig();
-    const { stderr } = await execAsync(`ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p ${config.port} ${config.user}@${config.host} "echo test" 2>&1`);
+    const { stderr } = await execAsync('ssh', [
+      '-o',
+      'ConnectTimeout=5',
+      '-o',
+      'StrictHostKeyChecking=no',
+      '-p',
+      config.port.toString(),
+      `${config.user}@${config.host}`,
+      'echo test',
+    ]);
 
     return !stderr || stderr.length === 0;
   } catch {
