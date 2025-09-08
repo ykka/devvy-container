@@ -121,21 +121,21 @@ export async function cleanupCommand(options: CleanupOptions): Promise<void> {
       },
     },
     {
-      name: 'Environment Files',
-      description: 'Remove .env and .env.local files',
+      name: 'Environment and Config Files',
+      description: 'Remove .env and devvy.config.json files',
       action: async () => {
-        const spinner = new Spinner('Removing environment files...');
+        const spinner = new Spinner('Removing environment and config files...');
         spinner.start();
 
-        const envFiles = ['.env', '.env.local'];
-        for (const file of envFiles) {
+        const configFiles = ['.env', 'devvy.config.json'];
+        for (const file of configFiles) {
           const filePath = path.join(process.cwd(), file);
           if (await fs.pathExists(filePath)) {
             await fs.remove(filePath);
           }
         }
 
-        spinner.succeed('Environment files removed');
+        spinner.succeed('Environment and config files removed');
       },
     },
   ];
@@ -217,7 +217,7 @@ async function performFullCleanup(): Promise<void> {
       }
     }
 
-    const filesToRemove = ['.env', '.env.local'];
+    const filesToRemove = ['.env', 'devvy.config.json'];
     for (const file of filesToRemove) {
       const filePath = path.join(process.cwd(), file);
       if (await fs.pathExists(filePath)) {

@@ -1,0 +1,30 @@
+{
+  "projectsPath": "~/Repos/devvy-repos",
+  "integrations": {
+    "github": {
+      "token": ""
+    },
+    "linear": {
+      "apiKey": ""
+    }
+  },
+  "databases": {
+    "postgresql": "",
+    "mongodb": "",
+    "supabase": {
+      "url": "",
+      "anonKey": ""
+    }
+  },
+  "editor": {
+    "lazyvim": {
+      "enabled": true,
+      "readOnlyConfigPath": "~/.config/nvim"
+    }
+  },
+  "terminal": {
+    "tmux": {
+      "readOnlyConfigPath": "~/.config/tmux"
+    }
+  }
+}

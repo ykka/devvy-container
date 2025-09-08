@@ -74,5 +74,12 @@
       "allowComments": true,
       "allowTrailingCommas": false
     }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
   }
 }

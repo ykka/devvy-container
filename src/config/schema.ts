@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 export const envSchema = z.object({
-  // User Configuration
-  USER_ID: z.string().regex(/^\d+$/).default('1000'),
-  GROUP_ID: z.string().regex(/^\d+$/).default('1000'),
+  // User Configuration for runtime UID/GID matching
+  HOST_UID: z.string().regex(/^\d+$/).default('1000'),
+  HOST_GID: z.string().regex(/^\d+$/).default('1000'),
 
   // Git Configuration
   GIT_USER_NAME: z.string().default('Your Name'),

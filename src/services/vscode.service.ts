@@ -104,8 +104,6 @@ export class VSCodeService {
   public async importSettings(editorType: EditorType): Promise<void> {
     const config = this.getEditorPaths(editorType);
 
-    logger.info(`Importing ${config.name} settings...`);
-
     // Ensure project config directory exists
     await fs.ensureDir(this.projectConfigDir);
 
@@ -113,18 +111,12 @@ export class VSCodeService {
     if (await fs.pathExists(config.settingsPath)) {
       const settings = await fs.readJson(config.settingsPath);
       await fs.writeJson(path.join(this.projectConfigDir, 'settings.json'), settings, { spaces: 2 });
-      logger.success('Settings imported');
-    } else {
-      logger.warn('No settings.json found');
     }
 
     // Import keybindings.json
     if (await fs.pathExists(config.keybindingsPath)) {
       const keybindings = await fs.readJson(config.keybindingsPath);
       await fs.writeJson(path.join(this.projectConfigDir, 'keybindings.json'), keybindings, { spaces: 2 });
-      logger.success('Keybindings imported');
-    } else {
-      logger.warn('No keybindings.json found');
     }
 
     // Import extensions list
@@ -135,7 +127,6 @@ export class VSCodeService {
       const snippetsDir = path.join(this.projectConfigDir, 'snippets');
       await fs.ensureDir(snippetsDir);
       await fs.copy(config.snippetsPath, snippetsDir, { overwrite: true });
-      logger.success('Snippets imported');
     }
   }
 
@@ -193,21 +184,14 @@ export class VSCodeService {
     const config = this.getEditorPaths(editorType);
 
     try {
-      logger.info('Fetching installed extensions...');
-
       const { stdout } = await run(`${config.commandName} --list-extensions`);
 
       if (stdout) {
         const extensions = stdout.trim().split('\n').filter(Boolean);
         const extensionsPath = path.join(this.projectConfigDir, 'extensions.txt');
-
         await fs.writeFile(extensionsPath, extensions.join('\n'));
-        logger.success(`Imported ${extensions.length} extensions`);
-      } else {
-        logger.warn('No extensions found');
       }
     } catch (error) {
-      logger.warn(`Could not fetch extensions from ${config.name}`);
       logger.debug('Extension fetch error:', error as Record<string, unknown>);
     }
   }

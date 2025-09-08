@@ -97,6 +97,7 @@ program
 
 program
   .command('setup')
+  .alias('init')
   .description('Initial setup and configuration')
   .action(async () => {
     await setupCommand();

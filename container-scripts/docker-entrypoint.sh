@@ -1,8 +1,31 @@
 #!/bin/bash
 set -e
 
-# Get the actual group name for devvy user
-DEVVY_GROUP=$(id -gn devvy)
+# Runtime UID/GID matching for proper file permissions
+# These should be passed from docker-compose.yml
+HOST_UID=${HOST_UID:-2000}
+HOST_GID=${HOST_GID:-2000}
+
+# Modify devvy user to match host UID/GID
+if [ "$HOST_UID" != "2000" ] || [ "$HOST_GID" != "2000" ]; then
+    echo "Adjusting devvy user to match host UID:$HOST_UID GID:$HOST_GID..."
+    
+    # Create group if it doesn't exist
+    if ! getent group $HOST_GID > /dev/null 2>&1; then
+        groupadd -g $HOST_GID devvy_group
+    fi
+    
+    # Get the group name for the GID
+    DEVVY_GROUP=$(getent group $HOST_GID | cut -d: -f1)
+    
+    # Modify user and group
+    usermod -u $HOST_UID -g $HOST_GID devvy
+    
+    # Fix home directory ownership
+    chown -R $HOST_UID:$HOST_GID /home/devvy
+else
+    DEVVY_GROUP=$(id -gn devvy)
+fi
 
 # Initialize firewall if running with network admin capabilities
 if capsh --print | grep -q cap_net_admin; then
@@ -18,8 +41,8 @@ if [ -f /home/devvy/.ssh/container_rsa ]; then
         chmod 600 /home/devvy/.ssh/container_rsa
     fi
 
-    # Add to ssh-agent
-    sudo -u devvy bash -c 'eval $(ssh-agent -s) && ssh-add ~/.ssh/container_rsa'
+    # Add to ssh-agent (run as devvy user)
+    su - devvy -c 'eval $(ssh-agent -s) && ssh-add ~/.ssh/container_rsa'
 fi
 
 # Setup SSH authorized_keys for host access
@@ -31,13 +54,20 @@ fi
 
 # Setup GitHub authentication if token provided
 if [ -n "$GITHUB_TOKEN" ]; then
-    echo "$GITHUB_TOKEN" | sudo -u devvy gh auth login --with-token
+    echo "$GITHUB_TOKEN" | su - devvy -c 'gh auth login --with-token'
 fi
 
 # Git config is mounted from host system as read-only, no need to configure
 
+# Install LazyVim if requested
+if [ "$INSTALL_LAZYVIM" = "true" ] && [ ! -d "/home/devvy/.config/nvim_local" ]; then
+    echo "Installing LazyVim..."
+    su - devvy -c 'git clone https://github.com/LazyVim/starter /home/devvy/.config/nvim_local'
+    su - devvy -c 'rm -rf /home/devvy/.config/nvim_local/.git'
+fi
+
 # Fix permissions on mounted directories
-chown -R devvy:${DEVVY_GROUP} /home/devvy/claudespace 2>/dev/null || true
+chown -R devvy:${DEVVY_GROUP} /home/devvy/repos 2>/dev/null || true
 
 # Start SSH daemon
 if [ "$1" = "/usr/sbin/sshd" ]; then

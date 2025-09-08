@@ -1,7 +1,9 @@
+import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { CONSTANTS } from '@config/constants';
 import { ConfigService } from '@services/config.service';
+import { ConfigManager, type DevvyConfig } from '@services/config-manager.service';
 import { SSHService } from '@services/ssh.service';
 import { VSCodeService } from '@services/vscode.service';
 import { logger } from '@utils/logger';
@@ -14,12 +16,12 @@ import * as fs from 'fs-extra';
 export async function setupCommand(): Promise<void> {
   try {
     logger.box('Devvy Setup Wizard');
-    logger.info('This wizard will help you set up your development environment.\n');
+    logger.info('This wizard will help you set up your development environment\n');
 
     const config = ConfigService.getInstance();
     const projectRoot = config.getProjectRoot();
 
-    const steps = [checkDockerInstallation, checkDockerCompose, createDirectories, generateSSHKeys, setupGitConfig, setupVSCodeSync, createEnvFile];
+    const steps = [checkDockerInstallation, checkDockerCompose, createDirectories, generateSSHKeys, setupDevvyConfig, setupVSCodeSync];
 
     for (const step of steps) {
       await step(projectRoot);
@@ -27,9 +29,10 @@ export async function setupCommand(): Promise<void> {
 
     logger.success('\n✨ Setup completed successfully!');
     logger.info('\nNext steps:');
-    logger.step(`1. Start the container: ${chalk.cyan('devvy start')}`);
-    logger.step(`2. Connect to it: ${chalk.cyan('devvy connect')}`);
-    logger.step(`3. Start coding! 🚀`);
+    logger.step(`1. Build the container: ${chalk.cyan('devvy rebuild')}`);
+    logger.step(`2. Start the container: ${chalk.cyan('devvy start')}`);
+    logger.step(`3. Connect to it: ${chalk.cyan('devvy connect')}`);
+    logger.step(`4. Start coding! 🚀`);
   } catch (error) {
     logger.error('Setup failed', error);
     process.exit(1);
@@ -104,244 +107,294 @@ async function generateSSHKeys(_projectRoot: string): Promise<void> {
   }
 }
 
-async function setupGitConfig(projectRoot: string): Promise<void> {
-  const useGit = await prompt.confirm('Would you like to configure Git settings?', true);
-  if (!useGit) {
-    return;
-  }
-
-  const gitConfig = await exec('git', ['config', '--global', 'user.name']);
-  const currentName = gitConfig.success ? gitConfig.stdout.trim() : '';
-
-  const gitEmail = await exec('git', ['config', '--global', 'user.email']);
-  const currentEmail = gitEmail.success ? gitEmail.stdout.trim() : '';
-
-  const name = await prompt.input({
-    message: 'Git user name:',
-    default: currentName || undefined,
-  });
-
-  const email = await prompt.input({
-    message: 'Git email:',
-    default: currentEmail || undefined,
-  });
-
-  const gitConfigPath = path.join(projectRoot, CONSTANTS.PATHS.SECRETS_DIR, '.gitconfig');
-  const gitConfigContent = `[user]
-  name = ${name}
-  email = ${email}
-[core]
-  editor = nano
-[pull]
-  rebase = false
-`;
-
-  await fs.writeFile(gitConfigPath, gitConfigContent);
-  logger.success('Git configuration saved');
-}
-
-async function setupVSCodeSync(_projectRoot: string): Promise<void> {
+async function setupVSCodeSync(projectRoot: string): Promise<void> {
   const vscodeService = VSCodeService.getInstance();
 
   // Detect installed editor
   const editorType = await vscodeService.detectEditor();
 
   if (!editorType) {
-    logger.info('No VS Code or Cursor installation found, skipping editor sync');
-    return;
+    return; // Skip silently if no editor found
   }
 
   const editorName = editorType === 'cursor' ? 'Cursor' : 'VS Code';
-  const syncEditor = await prompt.confirm(`Would you like to import your ${editorName} settings to the project?`, true);
 
-  if (!syncEditor) {
-    return;
+  // Check if settings already exist
+  const vscodeConfigDir = path.join(projectRoot, CONSTANTS.PATHS.VSCODE_CONFIG_DIR);
+  const settingsExist = await fs.pathExists(path.join(vscodeConfigDir, 'settings.json'));
+
+  if (settingsExist) {
+    const overwrite = await prompt.confirm(`\nOverwrite existing ${editorName} settings with your current configuration?`, false);
+
+    if (!overwrite) {
+      return;
+    }
+  } else {
+    const syncEditor = await prompt.confirm(`\nImport ${editorName} settings to the project?`, true);
+
+    if (!syncEditor) {
+      return;
+    }
   }
-
-  const spinner = new Spinner(`Importing ${editorName} settings...`);
-  spinner.start();
 
   try {
     await vscodeService.importSettings(editorType);
-    spinner.succeed(`${editorName} settings imported successfully`);
-
-    logger.info('\nImported:');
-    logger.step('settings.json - Editor preferences');
-    logger.step('keybindings.json - Keyboard shortcuts');
-    logger.step('extensions.txt - Extension list');
-    logger.step('snippets/ - Code snippets');
+    logger.success(`${editorName} settings imported`);
   } catch (error) {
-    spinner.fail(`Failed to import ${editorName} settings`);
     logger.debug('Import error:', error as Record<string, unknown>);
   }
 }
 
-async function createEnvFile(projectRoot: string): Promise<void> {
-  const envPath = path.join(projectRoot, CONSTANTS.PATHS.ENV_FILE);
+async function setupDevvyConfig(_projectRoot: string): Promise<void> {
+  const configManager = ConfigManager.getInstance();
 
-  // Check if env file already exists
-  const existingEnv: Record<string, string> = {};
-  if (await fs.pathExists(envPath)) {
-    const shouldUpdate = await prompt.confirm('Environment file already exists. Update it?', true);
+  // Check if config already exists
+  let existingConfig: DevvyConfig | null = null;
+  if (await configManager.configExists()) {
+    const shouldUpdate = await prompt.confirm('\nUpdate Devvy configuration (projects path, API keys, etc)?', false);
     if (!shouldUpdate) {
-      logger.info('Keeping existing environment file');
+      // Still generate .env from existing config
+      const config = await configManager.loadConfig();
+      if (config) {
+        await configManager.generateEnvFile(config);
+      }
       return;
     }
-    // Load existing values
-    const envContent = await fs.readFile(envPath, 'utf8');
-    for (const line of envContent.split('\n')) {
-      const match = line.match(/^([^#][^=]+)=(.*)$/);
-      if (match?.[1] && match[2]) {
-        existingEnv[match[1].trim()] = match[2].trim().replace(/^"(.*)"$/, '$1');
+    existingConfig = await configManager.loadConfig();
+    logger.info('\nUpdating configuration...\n');
+  } else {
+    logger.info('\nSetting up configuration...\n');
+  }
+
+  // Expand home directory in paths
+  const expandPath = (p: string): string => {
+    if (p.startsWith('~')) {
+      return path.join(os.homedir(), p.slice(1));
+    }
+    return p;
+  };
+
+  // Step 1: Projects Directory
+  const defaultProjectsPath = configManager.getDefaultProjectsPath();
+  const projectsPath = await prompt.input({
+    message: 'Path to your projects folder (will be mounted to /home/devvy/repos):',
+    default: existingConfig?.projectsPath || defaultProjectsPath,
+  });
+
+  const expandedProjectsPath = expandPath(projectsPath);
+  if (!(await fs.pathExists(expandedProjectsPath))) {
+    const createDir = await prompt.confirm(`Directory ${projectsPath} doesn't exist. Create it?`, true);
+    if (createDir) {
+      await fs.ensureDir(expandedProjectsPath);
+      logger.success(`Created directory: ${projectsPath}`);
+    }
+  }
+
+  // Step 2: Integrations
+  const integrations: DevvyConfig['integrations'] = {
+    github: undefined,
+    linear: undefined,
+  };
+
+  // GitHub token
+  const useGitHub = await prompt.confirm('Would you like to configure GitHub CLI integration?', !!existingConfig?.integrations?.github?.token);
+  if (useGitHub) {
+    if (existingConfig?.integrations?.github?.token) {
+      const updateToken = await prompt.confirm('Update existing GitHub token?', false);
+      if (updateToken) {
+        const token = await prompt.password({
+          message: 'GitHub personal access token:',
+          mask: '*',
+        });
+        integrations.github = { token };
+      } else {
+        integrations.github = existingConfig.integrations.github;
+      }
+    } else {
+      const token = await prompt.password({
+        message: 'GitHub personal access token:',
+        mask: '*',
+      });
+      if (token) {
+        integrations.github = { token };
       }
     }
   }
 
-  logger.info('Setting up environment configuration...\n');
-
-  // Get current user's ID and group ID
-  const userIdResult = await exec('id', ['-u']);
-  const groupIdResult = await exec('id', ['-g']);
-  const userId = existingEnv.USER_ID || (userIdResult.success ? userIdResult.stdout.trim() : '1000');
-  const groupId = existingEnv.GROUP_ID || (groupIdResult.success ? groupIdResult.stdout.trim() : '1000');
-
-  // Get git config
-  const gitNameResult = await exec('git', ['config', '--global', 'user.name']);
-  const gitEmailResult = await exec('git', ['config', '--global', 'user.email']);
-  const defaultGitName = gitNameResult.success ? gitNameResult.stdout.trim() : 'Your Name';
-  const defaultGitEmail = gitEmailResult.success ? gitEmailResult.stdout.trim() : 'your.email@example.com';
-
-  const gitName =
-    existingEnv.GIT_USER_NAME ||
-    (await prompt.input({
-      message: 'Git user name:',
-      default: defaultGitName,
-    }));
-
-  const gitEmail =
-    existingEnv.GIT_USER_EMAIL ||
-    (await prompt.input({
-      message: 'Git email:',
-      default: defaultGitEmail,
-    }));
-
-  // Optional GitHub token
-  const useGitHub = await prompt.confirm('Would you like to configure GitHub CLI integration?', !!existingEnv.GITHUB_TOKEN);
-  let githubToken = '';
-  if (useGitHub) {
-    if (existingEnv.GITHUB_TOKEN) {
-      const updateToken = await prompt.confirm('Update existing GitHub token?', false);
-      githubToken = updateToken
-        ? await prompt.password({
-            message: 'GitHub personal access token:',
-            mask: '*',
-          })
-        : existingEnv.GITHUB_TOKEN;
-    } else {
-      githubToken = await prompt.password({
-        message: 'GitHub personal access token:',
-        mask: '*',
-      });
-    }
-  }
-
-  // Optional Linear integration
-  const useLinear = await prompt.confirm('Would you like to configure Linear integration?', !!existingEnv.LINEAR_API_KEY);
-  let linearApiKey = '';
+  // Linear API key
+  const useLinear = await prompt.confirm('Would you like to configure Linear integration?', !!existingConfig?.integrations?.linear?.apiKey);
   if (useLinear) {
-    if (existingEnv.LINEAR_API_KEY) {
+    if (existingConfig?.integrations?.linear?.apiKey) {
       const updateKey = await prompt.confirm('Update existing Linear API key?', false);
-      linearApiKey = updateKey
-        ? await prompt.password({
-            message: 'Linear API key:',
-            mask: '*',
-          })
-        : existingEnv.LINEAR_API_KEY;
+      if (updateKey) {
+        const apiKey = await prompt.password({
+          message: 'Linear API key:',
+          mask: '*',
+        });
+        integrations.linear = { apiKey };
+      } else {
+        integrations.linear = existingConfig.integrations.linear;
+      }
     } else {
-      linearApiKey = await prompt.password({
+      const apiKey = await prompt.password({
         message: 'Linear API key:',
         mask: '*',
       });
+      if (apiKey) {
+        integrations.linear = { apiKey };
+      }
     }
   }
 
-  // Optional database configurations
-  const useDatabases = await prompt.confirm(
-    'Would you like to configure database connections?',
-    !!(existingEnv.DATABASE_URL || existingEnv.MONGODB_URI || existingEnv.SUPABASE_URL),
-  );
-
-  let databaseUrl = '';
-  let mongodbUri = '';
-  let supabaseUrl = '';
-  let supabaseAnonKey = '';
+  // Step 3: Databases
+  let databases: DevvyConfig['databases'] | undefined;
+  const useDatabases = await prompt.confirm('Would you like to configure database connections?', !!existingConfig?.databases);
 
   if (useDatabases) {
+    databases = {};
+
     // PostgreSQL
-    const usePostgres = await prompt.confirm('Configure PostgreSQL connection?', !!existingEnv.DATABASE_URL);
+    const usePostgres = await prompt.confirm('Configure PostgreSQL connection?', !!existingConfig?.databases?.postgresql);
     if (usePostgres) {
-      databaseUrl =
-        existingEnv.DATABASE_URL ||
+      const url =
+        existingConfig?.databases?.postgresql ||
         (await prompt.input({
           message: 'PostgreSQL DATABASE_URL:',
           default: '',
         }));
+      if (url) {
+        databases.postgresql = url;
+      }
     }
 
     // MongoDB
-    const useMongo = await prompt.confirm('Configure MongoDB connection?', !!existingEnv.MONGODB_URI);
+    const useMongo = await prompt.confirm('Configure MongoDB connection?', !!existingConfig?.databases?.mongodb);
     if (useMongo) {
-      mongodbUri =
-        existingEnv.MONGODB_URI ||
+      const uri =
+        existingConfig?.databases?.mongodb ||
         (await prompt.input({
           message: 'MongoDB URI:',
           default: '',
         }));
+      if (uri) {
+        databases.mongodb = uri;
+      }
     }
 
     // Supabase
-    const useSupabase = await prompt.confirm('Configure Supabase connection?', !!existingEnv.SUPABASE_URL);
+    const useSupabase = await prompt.confirm('Configure Supabase connection?', !!existingConfig?.databases?.supabase);
     if (useSupabase) {
-      supabaseUrl =
-        existingEnv.SUPABASE_URL ||
+      const url =
+        existingConfig?.databases?.supabase?.url ||
         (await prompt.input({
           message: 'Supabase URL:',
           default: '',
         }));
-      supabaseAnonKey =
-        existingEnv.SUPABASE_ANON_KEY ||
+      const anonKey =
+        existingConfig?.databases?.supabase?.anonKey ||
         (await prompt.input({
           message: 'Supabase Anon Key:',
           default: '',
         }));
+      if (url && anonKey) {
+        databases.supabase = { url, anonKey };
+      }
     }
   }
 
-  const spinner = new Spinner('Writing environment file...');
+  // Step 4: LazyVim
+  const editor: DevvyConfig['editor'] = {};
+  const installLazyvim = await prompt.confirm('Would you like to install LazyVim in the container?', existingConfig?.editor?.lazyvim?.enabled ?? true);
+
+  if (installLazyvim) {
+    const useExistingConfig = await prompt.confirm('Use your existing Neovim configuration?', true);
+    if (useExistingConfig) {
+      const defaultPath = configManager.getDefaultLazyvimPath();
+      const configPath = await prompt.input({
+        message: 'Path to your Neovim config directory:',
+        default: existingConfig?.editor?.lazyvim?.readOnlyConfigPath || defaultPath,
+      });
+
+      const expandedConfigPath = expandPath(configPath);
+      if (await fs.pathExists(expandedConfigPath)) {
+        editor.lazyvim = {
+          enabled: true,
+          readOnlyConfigPath: configPath,
+        };
+      } else {
+        logger.warn(`Path ${configPath} doesn't exist. LazyVim will be installed with defaults.`);
+        editor.lazyvim = {
+          enabled: true,
+        };
+      }
+    } else {
+      editor.lazyvim = {
+        enabled: true,
+      };
+    }
+  } else {
+    editor.lazyvim = {
+      enabled: false,
+    };
+  }
+
+  // Step 5: Tmux
+  const terminal: DevvyConfig['terminal'] = {};
+  const useTmux = await prompt.confirm('Would you like to use your existing tmux configuration?', !!existingConfig?.terminal?.tmux?.readOnlyConfigPath);
+
+  if (useTmux) {
+    const defaultPath = configManager.getDefaultTmuxPath();
+    const configPath = await prompt.input({
+      message: 'Path to your tmux config directory:',
+      default: existingConfig?.terminal?.tmux?.readOnlyConfigPath || defaultPath,
+    });
+
+    const expandedConfigPath = expandPath(configPath);
+    if (await fs.pathExists(expandedConfigPath)) {
+      terminal.tmux = {
+        readOnlyConfigPath: configPath,
+      };
+    } else {
+      logger.warn(`Path ${configPath} doesn't exist. Tmux will use defaults.`);
+    }
+  }
+
+  // Build final configuration
+  const config: DevvyConfig = {
+    projectsPath,
+    integrations,
+    databases,
+    editor,
+    terminal,
+  };
+
+  // Save configuration
+  const spinner = new Spinner('Saving configuration...');
   spinner.start();
 
-  const envContent = `# User Configuration
-# Get these values by running: id -u and id -g on your Mac
-USER_ID=${userId}
-GROUP_ID=${groupId}
+  try {
+    await configManager.saveConfig(config);
+    await configManager.generateEnvFile(config);
+    spinner.succeed('Configuration saved successfully');
 
-# Git Configuration (Required)
-GIT_USER_NAME="${gitName}"
-GIT_USER_EMAIL="${gitEmail}"
+    // Update .gitignore to exclude the config file
+    const gitignorePath = path.join(_projectRoot, '.gitignore');
+    const gitignoreContent = await fs.readFile(gitignorePath, 'utf8');
+    const configFiles = ['devvy.config.json', '.env', '.env.local'];
+    const linesToAdd: string[] = [];
 
-# GitHub (Optional - for GitHub CLI)
-GITHUB_TOKEN=${githubToken}
+    for (const file of configFiles) {
+      if (!gitignoreContent.includes(file)) {
+        linesToAdd.push(file);
+      }
+    }
 
-# Linear Integration (Optional)
-LINEAR_API_KEY=${linearApiKey}
-
-# Database URLs (Optional)
-DATABASE_URL=${databaseUrl}
-MONGODB_URI=${mongodbUri}
-SUPABASE_URL=${supabaseUrl}
-SUPABASE_ANON_KEY=${supabaseAnonKey}
-`;
-
-  await fs.writeFile(envPath, envContent);
-  spinner.succeed('Environment file saved');
+    if (linesToAdd.length > 0) {
+      await fs.appendFile(gitignorePath, `\n# Devvy configuration\n${linesToAdd.join('\n')}\n`);
+      logger.info('Updated .gitignore with configuration files');
+    }
+  } catch (error) {
+    spinner.fail('Failed to save configuration');
+    throw error;
+  }
 }

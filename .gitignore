@@ -4,3 +4,5 @@ secrets/
 .DS_Store
 node_modules
 dist
+# Devvy configuration
+devvy.config.json

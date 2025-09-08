@@ -44,19 +44,9 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-# Setup user with matching host UID/GID  
-ARG USER_ID=1000
-ARG GROUP_ID=1000
-
-# Create devvy user (use 2000+ if 1000 conflicts with node user)
-RUN if id -u ${USER_ID} >/dev/null 2>&1; then \
-        # UID exists, use 2000 instead
-        useradd -u 2000 -g users -m -s /bin/zsh devvy; \
-    else \
-        # UID doesn't exist, use the provided one
-        useradd -u ${USER_ID} -g users -m -s /bin/zsh devvy; \
-    fi && \
-    echo 'devvy ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+# Create devvy user with a temporary UID (will be modified at runtime)
+# Using 2000 as it's unlikely to conflict with system users
+RUN useradd -u 2000 -m -s /bin/zsh devvy
 
 # Configure SSH for remote access (for mosh/ssh from host)
 RUN mkdir /var/run/sshd && \

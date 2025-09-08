@@ -28,10 +28,6 @@ export class ConfigService {
   private loadEnvConfig(): EnvConfig {
     dotenv.config({ path: CONSTANTS.PATHS.ENV_FILE });
 
-    if (fs.existsSync(CONSTANTS.PATHS.ENV_LOCAL)) {
-      dotenv.config({ path: CONSTANTS.PATHS.ENV_LOCAL, override: true });
-    }
-
     try {
       return envSchema.parse(process.env);
     } catch (error) {

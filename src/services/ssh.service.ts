@@ -9,13 +9,13 @@ import * as fs from 'fs-extra';
 export class SSHService {
   private static instance: SSHService;
   private readonly config: ConfigService;
-  private readonly sshDir: string;
+  private readonly secretsDir: string;
   private readonly knownHostsPath: string;
 
   private constructor() {
     this.config = ConfigService.getInstance();
-    this.sshDir = path.join(os.homedir(), '.ssh');
-    this.knownHostsPath = path.join(this.sshDir, 'known_hosts');
+    this.secretsDir = path.join(this.config.getProjectRoot(), 'secrets');
+    this.knownHostsPath = path.join(os.homedir(), '.ssh', 'known_hosts');
   }
 
   public static getInstance(): SSHService {
@@ -29,20 +29,25 @@ export class SSHService {
     publicKey: string;
     privateKey: string;
   }> {
-    const keyName = 'devvy_rsa';
-    const privateKeyPath = path.join(this.sshDir, keyName);
+    const keyName = 'container_rsa';
+    const privateKeyPath = path.join(this.secretsDir, keyName);
     const publicKeyPath = `${privateKeyPath}.pub`;
 
-    await fs.ensureDir(this.sshDir);
+    await fs.ensureDir(this.secretsDir);
 
     if (await fs.pathExists(privateKeyPath)) {
       logger.debug('SSH key already exists, using existing key');
       const publicKey = await fs.readFile(publicKeyPath, 'utf8');
+
+      // Also create authorized_keys file from the public key
+      const authorizedKeysPath = path.join(this.secretsDir, 'authorized_keys');
+      await fs.writeFile(authorizedKeysPath, publicKey);
+
       return { publicKey, privateKey: privateKeyPath };
     }
 
     logger.info('Generating SSH key pair...');
-    const { stderr } = await execAsync(`ssh-keygen -t rsa -b 4096 -f "${privateKeyPath}" -N "" -C "devvy@localhost"`);
+    const { stderr } = await execAsync(`ssh-keygen -t ed25519 -f "${privateKeyPath}" -N "" -C "claude-docker"`);
 
     if (stderr && !stderr.includes('Generating public/private')) {
       throw new Error(`Failed to generate SSH key: ${stderr}`);
@@ -51,6 +56,11 @@ export class SSHService {
     await fs.chmod(privateKeyPath, 0o600);
 
     const publicKey = await fs.readFile(publicKeyPath, 'utf8');
+
+    // Create authorized_keys file from the public key
+    const authorizedKeysPath = path.join(this.secretsDir, 'authorized_keys');
+    await fs.writeFile(authorizedKeysPath, publicKey);
+
     logger.success('SSH key generated successfully');
 
     return { publicKey, privateKey: privateKeyPath };
@@ -104,9 +114,10 @@ export class SSHService {
   }
 
   public async cleanupSSHKeys(): Promise<void> {
-    const keyName = 'devvy_rsa';
-    const privateKeyPath = path.join(this.sshDir, keyName);
+    const keyName = 'container_rsa';
+    const privateKeyPath = path.join(this.secretsDir, keyName);
     const publicKeyPath = `${privateKeyPath}.pub`;
+    const authorizedKeysPath = path.join(this.secretsDir, 'authorized_keys');
 
     try {
       if (await fs.pathExists(privateKeyPath)) {
@@ -117,6 +128,11 @@ export class SSHService {
       if (await fs.pathExists(publicKeyPath)) {
         await fs.remove(publicKeyPath);
         logger.debug('Removed public SSH key');
+      }
+
+      if (await fs.pathExists(authorizedKeysPath)) {
+        await fs.remove(authorizedKeysPath);
+        logger.debug('Removed authorized_keys file');
       }
     } catch (error) {
       logger.debug('Error cleaning up SSH keys:', error as Record<string, unknown>);
@@ -130,8 +146,8 @@ export class SSHService {
     keyPath: string;
   } {
     const sshConfig = this.config.getSshConfig();
-    const keyName = 'devvy_rsa';
-    const keyPath = path.join(this.sshDir, keyName);
+    const keyName = 'container_rsa';
+    const keyPath = path.join(this.secretsDir, keyName);
 
     return {
       user: sshConfig.user,

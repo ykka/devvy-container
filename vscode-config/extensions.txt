@@ -1,53 +1,34 @@
-# Cursor/VS Code extensions list - extracted from Cursor installation
-# Core Extensions
-dbaeumer.vscode-eslint
-esbenp.prettier-vscode
-biomejs.biome
+ahmadawais.shades-of-purple
+akamud.vscode-theme-onelight
+astro-build.astro-vscode
+beardedbear.beardedtheme
 bradlc.vscode-tailwindcss
-
-# Language Support
+clemenspeters.format-json
+danielgjackson.auto-dark-mode-windows
+dbaeumer.vscode-eslint
+deerawan.vscode-dash
+donjayamanne.python-environment-manager
+eliverlara.andromeda
+enkia.tokyo-night
+esbenp.prettier-vscode
+giovanicascaes.calm-days-sober-nights-theme-vscode
+github.vscode-pull-request-github
+herrmannplatz.npm-dependency-links
+jibjack.nineties
+kevinrose.vsc-python-indent
+liwei.relax-eyes-theme
+ms-python.debugpy
 ms-python.python
 ms-python.vscode-pylance
-ms-python.debugpy
-denoland.vscode-deno
-astro-build.astro-vscode
-
-# Git & Version Control
-eamodio.gitlens
-waderyan.gitblame
-github.github-vscode-theme
-github.vscode-github-actions
-
-# Productivity
-alefragnani.bookmarks
-gruntfuggly.todo-tree
-usernamehw.errorlens
-vscodevim.vim
-chamboug.js-auto-backticks
-xabikos.javascriptsnippets
-yzhang.markdown-all-in-one
-bierner.markdown-preview-github-styles
-
-# Development Tools
-ms-azuretools.vscode-docker
-ms-vscode-remote.remote-containers
-postman.postman-for-vscode
-qwtel.sqlite-viewer
-wix.vscode-import-cost
+ms-python.vscode-python-envs
+ms-vscode.vscode-typescript-next
+pabue.linear-theme
 pflannery.vscode-versionlens
-herrmannplatz.npm-dependency-links
-clemenspeters.format-json
-
-# Themes (optional - comment out if not needed)
-# enkia.tokyo-night
-# sdras.night-owl
-# beardedbear.beardedtheme
-# eliverlara.andromeda
-# tonsky.theme-alabaster
-
-# Python specific
-kevinrose.vsc-python-indent
-
-# Utilities
-ryuta46.multi-command
-danielgjackson.auto-dark-mode-windows
+ryanolsonx.solarized
+sdras.night-owl
+tobiasalthoff.atom-material-theme
+tonsky.theme-alabaster
+usernamehw.errorlens
+waderyan.gitblame
+wix.vscode-import-cost
+xabikos.javascriptsnippets

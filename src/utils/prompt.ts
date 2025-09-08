@@ -13,6 +13,7 @@ export async function confirm(message: string, defaultValue = false): Promise<bo
       name: 'confirmed',
       message,
       default: defaultValue,
+      prefix: '', // Remove the '?' prefix
     },
   ]);
 
@@ -26,6 +27,7 @@ export async function input(options: PromptOptions): Promise<string> {
       name: 'value',
       message: options.message,
       default: options.default as string | undefined,
+      prefix: '', // Remove the '?' prefix
     },
   ]);
 
@@ -39,6 +41,7 @@ export async function password(options: { message: string; mask?: string }): Pro
       name: 'password',
       message: options.message,
       mask: options.mask || '*',
+      prefix: '', // Remove the '?' prefix
     },
   ]);
 
@@ -52,6 +55,7 @@ export async function select<T = string>(message: string, choices: Array<{ name:
       name: 'selected',
       message,
       choices,
+      prefix: '', // Remove the '?' prefix
     },
   ]);
 
@@ -65,6 +69,7 @@ export async function multiSelect<T = string>(message: string, choices: Array<{ 
       name: 'selected',
       message,
       choices,
+      prefix: '', // Remove the '?' prefix
     },
   ]);
 
@@ -78,6 +83,7 @@ export async function number(options: PromptOptions & { min?: number; max?: numb
       name: 'value',
       message: options.message,
       default: options.default as number | undefined,
+      prefix: '', // Remove the '?' prefix
       validate: (input: number) => {
         if (options.min !== undefined && input < options.min) {
           return `Value must be at least ${options.min}`;
@@ -99,6 +105,7 @@ export async function path(message: string, options: { exists?: boolean; isFile?
       type: 'input',
       name: 'value',
       message,
+      prefix: '', // Remove the '?' prefix
       validate: async (input: string) => {
         if (!input) {
           return 'Path is required';

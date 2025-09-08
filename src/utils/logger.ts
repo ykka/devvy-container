@@ -16,23 +16,24 @@ const customFormat = printf(({ level, message, timestamp: ts, ...metadata }) => 
 
 const consoleFormat = printf(({ level, message }) => {
   const levelUpperCase = level.toUpperCase();
-  let coloredLevel: string;
 
+  // For INFO level, just return the message without prefix
+  if (levelUpperCase === 'INFO') {
+    return message as string;
+  }
+
+  let coloredLevel: string;
   switch (levelUpperCase) {
     case 'ERROR': {
-      coloredLevel = chalk.red(levelUpperCase);
+      coloredLevel = chalk.red('✗');
       break;
     }
     case 'WARN': {
-      coloredLevel = chalk.yellow(levelUpperCase);
-      break;
-    }
-    case 'INFO': {
-      coloredLevel = chalk.blue(levelUpperCase);
+      coloredLevel = chalk.yellow('⚠');
       break;
     }
     case 'DEBUG': {
-      coloredLevel = chalk.gray(levelUpperCase);
+      coloredLevel = chalk.gray('○');
       break;
     }
     default: {
@@ -40,7 +41,7 @@ const consoleFormat = printf(({ level, message }) => {
     }
   }
 
-  return `${coloredLevel}: ${message as string}`;
+  return `${coloredLevel} ${message as string}`;
 });
 
 class Logger {
@@ -79,22 +80,31 @@ class Logger {
   }
 
   public info(message: string, metadata?: Record<string, unknown>): void {
-    this.logger.info(message, metadata);
+    // For info messages, write directly to stdout to avoid prefix
+    process.stdout.write(`${message}\n`);
+    // Still log to file if configured
+    if (metadata) {
+      this.logger.debug(`Info with metadata: ${message}`, metadata);
+    }
   }
 
   public error(message: string, error?: Error | unknown): void {
+    process.stdout.write(`${chalk.red('✗')} ${message}\n`);
     if (error instanceof Error) {
-      this.logger.error(message, {
+      this.logger.debug(`Error details: ${message}`, {
         error: error.message,
         stack: error.stack,
       });
-    } else {
-      this.logger.error(message, { error });
+    } else if (error) {
+      this.logger.debug(`Error details: ${message}`, { error });
     }
   }
 
   public warn(message: string, metadata?: Record<string, unknown>): void {
-    this.logger.warn(message, metadata);
+    process.stdout.write(`${chalk.yellow('⚠')} ${message}\n`);
+    if (metadata) {
+      this.logger.debug(`Warning with metadata: ${message}`, metadata);
+    }
   }
 
   public debug(message: string, metadata?: Record<string, unknown>): void {
@@ -106,7 +116,7 @@ class Logger {
   }
 
   public step(message: string): void {
-    process.stdout.write(`${chalk.cyan('→')} ${message}\n`);
+    process.stdout.write(`  ${chalk.cyan('•')} ${message}\n`);
   }
 
   public command(cmd: string): void {

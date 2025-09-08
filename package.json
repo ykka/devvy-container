@@ -26,7 +26,8 @@
   },
   "lint-staged": {
     "*.ts": [
-      "biome check --write"
+      "biome check --write",
+      "bash -c 'npm run typecheck'"
     ]
   },
   "dependencies": {

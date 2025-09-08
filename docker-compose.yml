@@ -5,9 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        USER_ID: ${USER_ID:-1000}
-        GROUP_ID: ${GROUP_ID:-1000}
     container_name: claude-dev
     hostname: claude-dev
     cap_add:
@@ -20,15 +17,15 @@ services:
       - "60000-60010:60000-60010/udp" # Mosh
       - "3000-3010:3000-3010"        # Dev servers
     volumes:
-      # Your CloudSpace directory with worktrees inside
+      # Projects directory from configuration
       - type: bind
-        source: ${HOME}/Repos/claudespace
-        target: /home/devvy/claudespace
+        source: ${PROJECTS_PATH:-${HOME}/Repos/devvy-repos}
+        target: /home/devvy/repos
         consistency: delegated  # Mac optimization
 
-      # Your config files (read-only to prevent modifications)
+      # LazyVim config (conditional, read-only)
       - type: bind
-        source: ${HOME}/.config/nvim
+        source: ${LAZYVIM_CONFIG_PATH:-${HOME}/.config/nvim}
         target: /home/devvy/.config/nvim
         read_only: true
 
@@ -37,8 +34,9 @@ services:
         target: /home/devvy/.zshrc
         read_only: true
 
+      # Tmux config (conditional, read-only)
       - type: bind
-        source: ${HOME}/.config/tmux
+        source: ${TMUX_CONFIG_PATH:-${HOME}/.config/tmux}
         target: /home/devvy/.config/tmux
         read_only: true
 
@@ -85,8 +83,8 @@ services:
       # X11 socket for GUI forwarding (macOS)
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     environment:
-      USER_ID: ${USER_ID:-1000}
-      GROUP_ID: ${GROUP_ID:-1000}
+      HOST_UID: ${HOST_UID:-1000}
+      HOST_GID: ${HOST_GID:-1000}
       GIT_USER_NAME: ${GIT_USER_NAME}
       GIT_USER_EMAIL: ${GIT_USER_EMAIL}
       GITHUB_TOKEN: ${GITHUB_TOKEN}

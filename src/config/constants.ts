@@ -13,7 +13,6 @@ export const CONSTANTS = {
     DOCKER_COMPOSE: 'docker-compose.yml',
     DOCKERFILE: 'Dockerfile',
     ENV_FILE: '.env',
-    ENV_LOCAL: '.env.local',
     SECRETS_DIR: 'secrets',
     VSCODE_CONFIG_DIR: 'vscode-config',
     CONTAINER_SCRIPTS_DIR: 'container-scripts',
