@@ -1,6 +1,8 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+const projectRoot = process.cwd();
+
 /**
  * Expand tilde (~) in file paths to user's home directory
  */
@@ -27,4 +29,11 @@ export function normalizePath(filePath: string): string {
 export function getAbsolutePath(relativePath: string, basePath?: string): string {
   const base = basePath || process.cwd();
   return path.isAbsolute(relativePath) ? relativePath : path.join(base, relativePath);
+}
+
+/**
+ * Get project root directory
+ */
+export function getProjectRoot(): string {
+  return projectRoot;
 }

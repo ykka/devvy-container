@@ -4,8 +4,8 @@ devvy
 # Secrets for SSH keygen files
 secrets/
 
-# Devvy configuration
-devvy.config.json
+# User configuration
+user.config.json
 
 # ENV file (generated)
 .env

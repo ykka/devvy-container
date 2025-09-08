@@ -5,7 +5,7 @@ import * as config from '@config/index';
 import * as ssh from '@services/ssh';
 import * as vscode from '@services/vscode';
 import { logger } from '@utils/logger';
-import { expandPath } from '@utils/paths';
+import { expandPath, getProjectRoot } from '@utils/paths';
 import * as prompt from '@utils/prompt';
 import { commandExists, exec } from '@utils/shell';
 import { Spinner } from '@utils/spinner';
@@ -17,9 +17,9 @@ export async function setupCommand(): Promise<void> {
     logger.box('Devvy Setup Wizard');
     logger.info('This wizard will help you set up your development environment\n');
 
-    const projectRoot = config.getProjectRoot();
+    const projectRoot = getProjectRoot();
 
-    const steps = [checkDockerInstallation, checkDockerCompose, createDirectories, generateSSHKeys, setupDevvyConfig, setupVSCodeSync];
+    const steps = [checkDockerInstallation, checkDockerCompose, createDirectories, generateSSHKeys, setupUserConfig, setupVSCodeSync];
 
     for (const step of steps) {
       await step(projectRoot);
@@ -139,20 +139,20 @@ async function setupVSCodeSync(projectRoot: string): Promise<void> {
   }
 }
 
-async function setupDevvyConfig(_projectRoot: string): Promise<void> {
+async function setupUserConfig(_projectRoot: string): Promise<void> {
   // Check if config already exists
-  let existingConfig: config.DevvyConfig | null = null;
-  if (await config.configExists()) {
+  let existingConfig: config.UserConfig | null = null;
+  if (await config.userConfigExists()) {
     const shouldUpdate = await prompt.confirm('\nUpdate Devvy configuration (projects path, API keys, etc)?', false);
     if (!shouldUpdate) {
       // Still generate .env from existing config
-      const loadedConfig = await config.loadConfig();
+      const loadedConfig = await config.loadUserConfig();
       if (loadedConfig) {
         await config.generateEnvFile(loadedConfig);
       }
       return;
     }
-    existingConfig = await config.loadConfig();
+    existingConfig = await config.loadUserConfig();
     logger.info('\nUpdating configuration...\n');
   } else {
     logger.info('\nSetting up configuration...\n');
@@ -175,7 +175,7 @@ async function setupDevvyConfig(_projectRoot: string): Promise<void> {
   }
 
   // Step 2: Integrations
-  const integrations: config.DevvyConfig['integrations'] = {
+  const integrations: config.UserConfig['integrations'] = {
     github: undefined,
     linear: undefined,
   };
@@ -233,7 +233,7 @@ async function setupDevvyConfig(_projectRoot: string): Promise<void> {
   // Step 3: LazyVim
 
   // Step 3: LazyVim
-  const editor: config.DevvyConfig['editor'] = {};
+  const editor: config.UserConfig['editor'] = {};
   const installLazyvim = await prompt.confirm('Would you like to install LazyVim in the container?', existingConfig?.editor?.lazyvim?.enabled ?? true);
 
   if (installLazyvim) {
@@ -269,7 +269,7 @@ async function setupDevvyConfig(_projectRoot: string): Promise<void> {
   }
 
   // Step 4: Tmux
-  const terminal: config.DevvyConfig['terminal'] = {};
+  const terminal: config.UserConfig['terminal'] = {};
   const useTmux = await prompt.confirm('Would you like to use your existing tmux configuration?', !!existingConfig?.terminal?.tmux?.readOnlyConfigPath);
 
   if (useTmux) {
@@ -290,14 +290,13 @@ async function setupDevvyConfig(_projectRoot: string): Promise<void> {
   }
 
   // Build final configuration - merge with existing config or defaults
-  const existingFullConfig = await config.loadConfig();
-  const devvyConfig: config.DevvyConfig = {
-    ...config.getConfig(), // Get defaults
-    ...existingFullConfig, // Preserve existing config
+  const existingFullConfig = await config.loadUserConfig();
+  const userConfig: config.UserConfig = {
     projectsPath,
     integrations,
     editor,
     terminal,
+    firewall: existingFullConfig?.firewall || { allowedDomains: [] },
   };
 
   // Save configuration
@@ -305,14 +304,14 @@ async function setupDevvyConfig(_projectRoot: string): Promise<void> {
   spinner.start();
 
   try {
-    await config.saveConfig(devvyConfig);
-    await config.generateEnvFile(devvyConfig);
+    await config.saveUserConfig(userConfig);
+    await config.generateEnvFile(userConfig);
     spinner.succeed('Configuration saved successfully');
 
     // Update .gitignore to exclude the config file
     const gitignorePath = path.join(_projectRoot, '.gitignore');
     const gitignoreContent = await fs.readFile(gitignorePath, 'utf8');
-    const configFiles = ['devvy.config.json', '.env'];
+    const configFiles = ['user.config.json', '.env'];
     const linesToAdd: string[] = [];
 
     for (const file of configFiles) {

@@ -1,13 +1,5 @@
-// Re-export config management
-export {
-  configExists,
-  type DevvyConfig,
-  devvyConfigSchema,
-  getConfig,
-  getProjectRoot,
-  loadConfig,
-  saveConfig,
-} from './config';
+// Re-export user config management
+
 // Re-export default values
 export { getDefaultLazyvimPath, getDefaultProjectsPath, getDefaultTmuxPath } from './defaults';
 // Re-export environment management
@@ -19,3 +11,11 @@ export {
   loadEnvConfig,
   validateEnvironment,
 } from './environment';
+export {
+  getUserConfig,
+  loadUserConfig,
+  saveUserConfig,
+  type UserConfig,
+  userConfigExists,
+  userConfigSchema,
+} from './user-config';

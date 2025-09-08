@@ -1,8 +1,9 @@
 import * as path from 'node:path';
-import type { DevvyConfig } from '@config/config';
+
 import { CONSTANTS } from '@config/constants';
+import type { UserConfig } from '@config/user-config';
 import { logger } from '@utils/logger';
-import { expandPath } from '@utils/paths';
+import { expandPath, getProjectRoot } from '@utils/paths';
 import { exec } from '@utils/shell';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs-extra';
@@ -36,11 +37,7 @@ export const envSchema = z.object({
 
 export type EnvConfig = z.infer<typeof envSchema>;
 
-// Module-level state
-let envConfig: EnvConfig | null = null;
-
-const projectRoot = process.cwd();
-const envPath = path.join(projectRoot, CONSTANTS.HOST_PATHS.ENV_FILE);
+const envPath = path.join(getProjectRoot(), CONSTANTS.HOST_PATHS.ENV_FILE);
 
 /**
  * Load environment configuration from .env file
@@ -49,36 +46,28 @@ export function loadEnvConfig(): EnvConfig {
   dotenv.config({ path: envPath });
 
   try {
-    envConfig = envSchema.parse(process.env);
+    return envSchema.parse(process.env);
   } catch (error) {
     if (error instanceof z.ZodError) {
       logger.debug('Environment configuration validation:', { errors: error.errors });
       // Use defaults for missing values
-      envConfig = envSchema.parse({});
+      return envSchema.parse({});
     }
+    throw error;
   }
-
-  if (!envConfig) {
-    envConfig = envSchema.parse({});
-  }
-
-  return envConfig;
 }
 
 /**
- * Get current env config
+ * Get current env config (alias for loadEnvConfig)
  */
 export function getEnvConfig(): EnvConfig {
-  if (!envConfig) {
-    return loadEnvConfig();
-  }
-  return envConfig;
+  return loadEnvConfig();
 }
 
 /**
- * Generate .env file from DevvyConfig
+ * Generate .env file from UserConfig
  */
-export async function generateEnvFile(config: DevvyConfig): Promise<void> {
+export async function generateEnvFile(config: UserConfig): Promise<void> {
   // Get host user/group IDs
   const userIdResult = await exec('id', ['-u']);
   const groupIdResult = await exec('id', ['-g']);
@@ -93,7 +82,7 @@ export async function generateEnvFile(config: DevvyConfig): Promise<void> {
 
   // Build environment variables
   const envLines: string[] = [
-    '# Generated from devvy.config.json - DO NOT EDIT DIRECTLY',
+    '# Generated from user.config.json - DO NOT EDIT DIRECTLY',
     '# Run "devvy setup" to modify configuration',
     '',
     '# User IDs for permission matching',
@@ -148,9 +137,6 @@ export async function generateEnvFile(config: DevvyConfig): Promise<void> {
 
   await fs.writeFile(envPath, envLines.join('\n'));
   logger.debug('Environment file generated:', { path: envPath });
-
-  // Reload env config after generating
-  loadEnvConfig();
 }
 
 /**
@@ -183,13 +169,13 @@ export async function validateEnvironment(): Promise<{ valid: boolean; errors: s
   }
 
   // Validate SSH keys exist
-  const sshKeyPath = path.join(projectRoot, CONSTANTS.HOST_PATHS.SECRETS_DIR, CONSTANTS.SSH.KEY_NAME);
+  const sshKeyPath = path.join(getProjectRoot(), CONSTANTS.HOST_PATHS.SECRETS_DIR, CONSTANTS.SSH.KEY_NAME);
   if (!(await fs.pathExists(sshKeyPath))) {
     errors.push('SSH keys not found. Run "devvy setup" first.');
   }
 
   // Validate docker-compose.yml exists
-  const composePath = path.join(projectRoot, CONSTANTS.DOCKER.COMPOSE_FILE);
+  const composePath = path.join(getProjectRoot(), CONSTANTS.DOCKER.COMPOSE_FILE);
   if (!(await fs.pathExists(composePath))) {
     errors.push('docker-compose.yml not found');
   }
