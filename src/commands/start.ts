@@ -1,7 +1,7 @@
 import { ComposeService } from '@services/compose.service';
+import { ConfigService } from '@services/config.service';
 import { DockerService } from '@services/docker.service';
 import { SSHService } from '@services/ssh.service';
-import { UnifiedConfigService } from '@services/unified-config.service';
 import { logger } from '@utils/logger';
 import { Spinner } from '@utils/spinner';
 import chalk from 'chalk';
@@ -14,7 +14,7 @@ export interface StartOptions {
 export async function startCommand(options: StartOptions): Promise<void> {
   const dockerService = DockerService.getInstance();
   const composeService = ComposeService.getInstance();
-  const config = UnifiedConfigService.getInstance();
+  const config = ConfigService.getInstance();
   const sshService = SSHService.getInstance();
 
   try {

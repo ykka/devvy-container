@@ -2,8 +2,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { CONSTANTS } from '@config/constants';
-import { ConfigService } from '@services/config.service';
-import { ConfigManager, type DevvyConfig } from '@services/config-manager.service';
+import { ConfigService, type DevvyConfig } from '@services/config.service';
 import { SSHService } from '@services/ssh.service';
 import { VSCodeService } from '@services/vscode.service';
 import { logger } from '@utils/logger';
@@ -146,7 +145,7 @@ async function setupVSCodeSync(projectRoot: string): Promise<void> {
 }
 
 async function setupDevvyConfig(_projectRoot: string): Promise<void> {
-  const configManager = ConfigManager.getInstance();
+  const configManager = ConfigService.getInstance();
 
   // Check if config already exists
   let existingConfig: DevvyConfig | null = null;
@@ -305,8 +304,11 @@ async function setupDevvyConfig(_projectRoot: string): Promise<void> {
     }
   }
 
-  // Build final configuration
+  // Build final configuration - merge with existing config or defaults
+  const existingFullConfig = await configManager.loadConfig();
   const config: DevvyConfig = {
+    ...configManager.get(), // Get defaults
+    ...existingFullConfig, // Preserve existing config
     projectsPath,
     integrations,
     editor,
