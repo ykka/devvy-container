@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 
-import { ConfigService } from '@services/config.service';
-import { SSHService } from '@services/ssh.service';
+import { CONSTANTS } from '@config/constants';
+import * as ssh from '@services/ssh';
 import { logger } from '@utils/logger';
 import * as prompt from '@utils/prompt';
 import { run } from '@utils/shell';
@@ -23,9 +23,6 @@ interface CleanupAction {
 }
 
 export async function cleanupCommand(options: CleanupOptions): Promise<void> {
-  const config = ConfigService.getInstance();
-  const sshService = SSHService.getInstance();
-
   logger.info(chalk.bold.cyan('Devvy Environment Cleanup'));
   logger.info(chalk.cyan('===================================='));
   logger.info('');
@@ -42,7 +39,7 @@ export async function cleanupCommand(options: CleanupOptions): Promise<void> {
     return;
   }
 
-  const containerName = config.getDockerConfig().containerName;
+  const containerName = CONSTANTS.DOCKER.CONTAINER_NAME;
   const imageName = `claude-devvy-container_${containerName}`;
 
   const cleanupActions: CleanupAction[] = [
@@ -110,7 +107,7 @@ export async function cleanupCommand(options: CleanupOptions): Promise<void> {
         const spinner = new Spinner('Removing SSH keys and secrets...');
         spinner.start();
 
-        await sshService.cleanupHostSSHKeys();
+        await ssh.cleanupHostSSHKeys();
 
         const secretsDir = path.join(process.cwd(), 'secrets');
         if (await fs.pathExists(secretsDir)) {
@@ -206,8 +203,7 @@ async function performFullCleanup(): Promise<void> {
     await run('docker rm -f claude-devvy-container 2>/dev/null || true');
     await run('docker rmi claude-devvy-container_devcontainer 2>/dev/null || true');
 
-    const sshService = SSHService.getInstance();
-    await sshService.cleanupHostSSHKeys();
+    await ssh.cleanupHostSSHKeys();
 
     const dirsToRemove = ['secrets'];
     for (const dir of dirsToRemove) {

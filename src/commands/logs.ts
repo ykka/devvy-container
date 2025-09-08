@@ -1,9 +1,10 @@
 import type { Readable } from 'node:stream';
 
-import { ConfigService } from '@services/config.service';
-import { DockerService } from '@services/docker.service';
+import { CONSTANTS } from '@config/constants';
+import * as docker from '@services/docker';
 import { logger } from '@utils/logger';
 import chalk from 'chalk';
+import Docker from 'dockerode';
 
 export interface LogsOptions {
   follow?: boolean;
@@ -14,19 +15,16 @@ export interface LogsOptions {
 }
 
 export async function logsCommand(options: LogsOptions): Promise<void> {
-  const dockerService = DockerService.getInstance();
-  const config = ConfigService.getInstance();
-
   try {
-    const containerName = config.getDockerConfig().containerName;
+    const containerName = CONSTANTS.DOCKER.CONTAINER_NAME;
 
-    const isDockerRunning = await dockerService.isDockerRunning();
+    const isDockerRunning = await docker.isDockerRunning();
     if (!isDockerRunning) {
       logger.error('Docker daemon is not running');
       process.exit(1);
     }
 
-    const containerInfo = await dockerService.getContainerInfo(containerName);
+    const containerInfo = await docker.getContainerInfo(containerName).catch(() => null);
     if (!containerInfo) {
       logger.error(`Container '${containerName}' does not exist`);
       logger.info(`Run ${chalk.cyan('devvy start')} to create the container`);
@@ -39,7 +37,8 @@ export async function logsCommand(options: LogsOptions): Promise<void> {
     }
     logger.info('');
 
-    const container = dockerService.getDocker().getContainer(containerName);
+    const dockerInstance = new Docker();
+    const container = dockerInstance.getContainer(containerName);
 
     interface DockerLogsOptions {
       stdout: boolean;

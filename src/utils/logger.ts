@@ -1,4 +1,4 @@
-import { ConfigService } from '@services/config.service';
+import { CONSTANTS } from '@config/constants';
 import chalk from 'chalk';
 import * as winston from 'winston';
 
@@ -49,11 +49,8 @@ class Logger {
   private logger: winston.Logger;
 
   private constructor() {
-    const config = ConfigService.getInstance();
-    const loggingConfig = config.getLoggingConfig();
-
     this.logger = winston.createLogger({
-      level: loggingConfig.level,
+      level: CONSTANTS.LOGGING.LEVEL,
       format: combine(timestamp(), customFormat),
       transports: [
         new winston.transports.Console({

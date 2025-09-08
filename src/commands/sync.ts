@@ -1,4 +1,5 @@
-import { type EditorType, VSCodeService } from '@services/vscode.service';
+import type { EditorType } from '@services/vscode';
+import * as vscode from '@services/vscode';
 import { logger } from '@utils/logger';
 import * as prompt from '@utils/prompt';
 import { Spinner } from '@utils/spinner';
@@ -8,11 +9,8 @@ export interface SyncOptions {
 }
 
 export async function syncCommand(options: SyncOptions): Promise<void> {
-  const vscodeService = VSCodeService.getInstance();
-
   try {
-    // Ensure project config directory exists
-    await vscodeService.ensureProjectConfig();
+    // Project config directory is automatically created when importing settings
 
     // Detect or select editor
     let editorType: EditorType | null = null;
@@ -31,7 +29,7 @@ export async function syncCommand(options: SyncOptions): Promise<void> {
       }
     } else {
       // Auto-detect editor
-      editorType = await vscodeService.detectEditor();
+      editorType = await vscode.detectEditor();
 
       if (!editorType) {
         // No editor detected, ask user
@@ -60,7 +58,7 @@ export async function syncCommand(options: SyncOptions): Promise<void> {
     spinner.start();
 
     try {
-      await vscodeService.syncToProject(editorType);
+      await vscode.importEditorSettings(editorType);
 
       spinner.succeed(`Successfully imported ${editorName} settings to claude-devvy-container project for use inside the container`);
 

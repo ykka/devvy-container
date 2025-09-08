@@ -1,7 +1,7 @@
-import { ComposeService } from '@services/compose.service';
-import { ConfigService } from '@services/config.service';
-import { DockerService } from '@services/docker.service';
-import { SSHService } from '@services/ssh.service';
+import { CONSTANTS } from '@config/constants';
+import * as compose from '@services/compose';
+import * as docker from '@services/docker';
+import * as ssh from '@services/ssh';
 import { logger } from '@utils/logger';
 import * as prompt from '@utils/prompt';
 import { Spinner } from '@utils/spinner';
@@ -14,16 +14,10 @@ interface RebuildOptions {
 
 export async function rebuildCommand(options: RebuildOptions): Promise<void> {
   try {
-    const config = ConfigService.getInstance();
-    const docker = DockerService.getInstance();
-    const compose = ComposeService.getInstance();
-    const sshService = SSHService.getInstance();
-    const containerName = config.getDockerConfig().containerName;
-    const sshConfig = config.getSshConfig();
+    const containerName = CONSTANTS.DOCKER.CONTAINER_NAME;
 
     // Check if container is running
-    const containerInfo = await docker.getContainer(containerName);
-    const isRunning = containerInfo ? await docker.isRunning(containerName) : false;
+    const isRunning = await docker.isContainerRunning(containerName);
 
     if (isRunning && !options.force) {
       const shouldStop = await prompt.confirm('Container is running. Stop it before rebuilding?', true);
@@ -42,21 +36,20 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
     }
 
     // Step 2: Handle container SSH key removal before rebuild
-    await sshService.updateContainerKeyForRebuild('localhost', sshConfig.port);
+    await ssh.updateContainerKeyForRebuild('localhost', CONSTANTS.SSH.PORT);
 
     // Step 4: Remove old container
-    if (containerInfo) {
-      const spinner = new Spinner('Removing old container...');
-      spinner.start();
-      await docker.removeContainer(containerName, true);
-      spinner.succeed('Old container removed');
-    }
+    const removeSpinner = new Spinner('Removing old container...');
+    removeSpinner.start();
+    await docker.removeContainer(containerName, true);
+    removeSpinner.succeed('Old container removed');
 
     // Step 5: Build new image
     logger.info('\n📦 Building new container image...\n');
 
-    const buildSuccess = await compose.build({ noCache: options.noCache });
-    if (!buildSuccess) {
+    try {
+      await compose.composeBuild(options.noCache || false);
+    } catch {
       logger.error('Failed to build container image');
       process.exit(1);
     }
@@ -67,8 +60,9 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
     const startSpinner = new Spinner('Starting new container...');
     startSpinner.start();
 
-    const startResult = await compose.up({ detach: true });
-    if (!startResult) {
+    try {
+      await compose.composeUp(true, false);
+    } catch {
       startSpinner.fail('Failed to start container');
       process.exit(1);
     }
@@ -86,8 +80,8 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
     while (!containerReady && attempts < maxAttempts) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       try {
-        const result = await docker.exec(containerName, ['true']);
-        if (result.success) {
+        const result = await docker.execInContainer(containerName, ['true']);
+        if (result.exitCode === 0) {
           containerReady = true;
         }
       } catch {
@@ -105,7 +99,7 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
 
     // Step 8: Add container's new SSH key to host's known_hosts
     console.log(`\n${chalk.blue("Adding container's new SSH key to host's known_hosts...")}`);
-    const sshAdded = await sshService.addContainerSSHKeyToHostKnownHosts('localhost', sshConfig.port);
+    const sshAdded = await ssh.addContainerSSHKeyToHostKnownHosts('localhost', CONSTANTS.SSH.PORT);
 
     if (!sshAdded) {
       logger.warn("Container's SSH key was not added to host's known_hosts.");
@@ -116,7 +110,7 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
     const healthSpinner = new Spinner('Verifying container health...');
     healthSpinner.start();
 
-    const isHealthy = await docker.isRunning(containerName);
+    const isHealthy = await docker.isContainerRunning(containerName);
     if (isHealthy) {
       healthSpinner.succeed('Container is healthy and running');
     } else {

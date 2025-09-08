@@ -2,8 +2,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { CONSTANTS } from '@config/constants';
-import { ConfigService } from '@services/config.service';
-import { DockerService } from '@services/docker.service';
+import * as docker from '@services/docker';
 import { logger } from '@utils/logger';
 import { commandExists, execInteractive } from '@utils/shell';
 import chalk from 'chalk';
@@ -15,19 +14,15 @@ export interface ConnectOptions {
 }
 
 export async function connectCommand(options: ConnectOptions): Promise<void> {
-  const dockerService = DockerService.getInstance();
-  const config = ConfigService.getInstance();
-
   try {
-    const containerName = config.getDockerConfig().containerName;
-    const containerInfo = await dockerService.getContainerInfo(containerName);
+    const containerName = CONSTANTS.DOCKER.CONTAINER_NAME;
+    const containerInfo = await docker.getContainerInfo(containerName).catch(() => null);
 
     if (!containerInfo || containerInfo.state !== 'running') {
       logger.error('Container is not running. Please start it first with: devvy start');
       process.exit(1);
     }
 
-    const sshConfig = config.getSshConfig();
     const sshKeyPath = path.join(process.cwd(), CONSTANTS.HOST_PATHS.SECRETS_DIR, CONSTANTS.SSH.KEY_NAME);
 
     if (!(await fs.pathExists(sshKeyPath))) {
@@ -54,14 +49,14 @@ export async function connectCommand(options: ConnectOptions): Promise<void> {
 
     if (options.mosh) {
       command = 'mosh';
-      args = ['--ssh', `ssh -p ${sshConfig.port} -i ${sshKeyPath}`, `${sshConfig.user}@localhost`];
+      args = ['--ssh', `ssh -p ${CONSTANTS.SSH.PORT} -i ${sshKeyPath}`, `${CONSTANTS.CONTAINER_USER.NAME}@localhost`];
 
       if (options.tmux) {
         args.push('--', 'tmux', 'new-session', '-A', '-s', 'main');
       }
     } else {
       command = 'ssh';
-      args = ['-p', String(sshConfig.port), '-i', sshKeyPath, `${sshConfig.user}@localhost`];
+      args = ['-p', String(CONSTANTS.SSH.PORT), '-i', sshKeyPath, `${CONSTANTS.CONTAINER_USER.NAME}@localhost`];
 
       if (options.tmux) {
         args.push('-t', 'tmux new-session -A -s main');

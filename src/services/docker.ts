@@ -1,0 +1,200 @@
+import { logger } from '@utils/logger';
+import Docker from 'dockerode';
+
+export interface ContainerInfo {
+  id: string;
+  name: string;
+  state: string;
+  status: string;
+  image: string;
+  ports: Array<{
+    private: number;
+    public: number;
+    type: string;
+  }>;
+  created: string;
+  exitCode?: number;
+  finishedAt?: string;
+}
+
+// Single docker instance at module level
+const docker = new Docker();
+
+/**
+ * Check if Docker daemon is running
+ */
+export async function isDockerRunning(): Promise<boolean> {
+  try {
+    await docker.ping();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get container by name or ID
+ */
+export async function getContainer(name: string): Promise<Docker.Container> {
+  const containers = await docker.listContainers({ all: true });
+  const container = containers.find((c) => c.Names.includes(`/${name}`) || c.Id === name);
+
+  if (!container) {
+    throw new Error(`Container ${name} not found`);
+  }
+
+  return docker.getContainer(container.Id);
+}
+
+/**
+ * Get detailed container information
+ */
+export async function getContainerInfo(name: string): Promise<ContainerInfo> {
+  const container = await getContainer(name);
+  const info = await container.inspect();
+
+  return {
+    id: info.Id,
+    name: info.Name.replace(/^\//, ''),
+    state: info.State.Status,
+    status: info.State.Running ? 'Running' : 'Stopped',
+    image: info.Config.Image,
+    ports: Object.entries(info.NetworkSettings.Ports || {}).map(([key, value]) => {
+      const [privatePort, type] = key.split('/');
+      const publicPort = value?.[0]?.HostPort;
+      return {
+        private: Number.parseInt(privatePort ?? '0', 10),
+        public: publicPort ? Number.parseInt(publicPort, 10) : 0,
+        type: type || 'tcp',
+      };
+    }),
+    created: info.Created,
+    exitCode: info.State.ExitCode,
+    finishedAt: info.State.FinishedAt,
+  };
+}
+
+/**
+ * Start a container
+ */
+export async function startContainer(name: string): Promise<void> {
+  const container = await getContainer(name);
+  const info = await container.inspect();
+
+  if (info.State.Running) {
+    logger.info('Container is already running');
+    return;
+  }
+
+  await container.start();
+  logger.success(`Container ${name} started successfully`);
+}
+
+/**
+ * Stop a container
+ */
+export async function stopContainer(name: string, force = false): Promise<void> {
+  const container = await getContainer(name);
+  const info = await container.inspect();
+
+  if (!info.State.Running) {
+    logger.info('Container is already stopped');
+    return;
+  }
+
+  await (force ? container.kill() : container.stop());
+  logger.success(`Container ${name} stopped successfully`);
+}
+
+/**
+ * Check if container is running
+ */
+export async function isContainerRunning(name: string): Promise<boolean> {
+  try {
+    const container = await getContainer(name);
+    const info = await container.inspect();
+    return info.State.Running;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Remove a container
+ */
+export async function removeContainer(name: string, force = false): Promise<void> {
+  try {
+    const container = await getContainer(name);
+    await container.remove({ force });
+    logger.success(`Container ${name} removed successfully`);
+  } catch (error: any) {
+    // Container not found is not an error for removal
+    if (error.message?.includes('not found')) {
+      logger.info(`Container ${name} not found`);
+      return;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Execute command in container
+ */
+export async function execInContainer(name: string, command: string[]): Promise<{ exitCode: number; output: string }> {
+  const container = await getContainer(name);
+
+  const exec = await container.exec({
+    Cmd: command,
+    AttachStdout: true,
+    AttachStderr: true,
+    AttachStdin: false,
+    Tty: false,
+  });
+
+  const stream = await exec.start({});
+
+  return new Promise((resolve, reject) => {
+    let output = '';
+
+    stream.on('data', (chunk: Buffer) => {
+      output += chunk.toString();
+    });
+
+    stream.on('end', async () => {
+      const inspectInfo = await exec.inspect();
+      resolve({
+        exitCode: inspectInfo.ExitCode || 0,
+        output,
+      });
+    });
+
+    stream.on('error', reject);
+  });
+}
+
+/**
+ * Get container logs
+ */
+export async function getContainerLogs(name: string, tail?: number): Promise<NodeJS.ReadableStream> {
+  const container = await getContainer(name);
+
+  const stream = container.logs({
+    stdout: true,
+    stderr: true,
+    follow: false,
+    tail: tail || 'all',
+  } as any);
+
+  return stream as any;
+}
+
+/**
+ * Prune unused Docker resources
+ */
+export async function pruneSystem(): Promise<void> {
+  logger.info('Pruning unused Docker resources...');
+  await docker.pruneContainers();
+  await docker.pruneImages();
+  await docker.pruneVolumes();
+  logger.success('Docker system pruned successfully');
+}

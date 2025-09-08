@@ -1,8 +1,9 @@
-import { ConfigService } from '@services/config.service';
-import { DockerService } from '@services/docker.service';
+import { CONSTANTS } from '@config/constants';
+import * as docker from '@services/docker';
 import { logger } from '@utils/logger';
 import chalk from 'chalk';
 import Table from 'cli-table3';
+import Docker from 'dockerode';
 
 export interface StatusOptions {
   json?: boolean;
@@ -10,13 +11,10 @@ export interface StatusOptions {
 }
 
 export async function statusCommand(options: StatusOptions): Promise<void> {
-  const dockerService = DockerService.getInstance();
-  const config = ConfigService.getInstance();
-
   try {
-    const containerName = config.getDockerConfig().containerName;
+    const containerName = CONSTANTS.DOCKER.CONTAINER_NAME;
 
-    const isDockerRunning = await dockerService.isDockerRunning();
+    const isDockerRunning = await docker.isDockerRunning();
     if (!isDockerRunning) {
       if (options.json) {
         process.stdout.write(`${JSON.stringify({ status: 'docker-not-running' }, null, 2)}\n`);
@@ -26,7 +24,7 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
       process.exit(1);
     }
 
-    const containerInfo = await dockerService.getContainerInfo(containerName);
+    const containerInfo = await docker.getContainerInfo(containerName).catch(() => null);
 
     if (options.json) {
       process.stdout.write(`${JSON.stringify(containerInfo, null, 2)}\n`);
@@ -89,8 +87,7 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
     if (containerInfo.state === 'running') {
       logger.info('');
       logger.info(`Connect with: ${chalk.cyan('devvy connect')}`);
-      const sshConfig = config.getSshConfig();
-      logger.info(`Or use SSH: ${chalk.cyan(`ssh -p ${sshConfig.port} ${sshConfig.user}@localhost`)}`);
+      logger.info(`Or use SSH: ${chalk.cyan(`ssh -p ${CONSTANTS.SSH.PORT} ${CONSTANTS.CONTAINER_USER.NAME}@localhost`)}`);
     } else {
       logger.info('');
       logger.info(`Start the container with: ${chalk.cyan('devvy start')}`);
@@ -108,8 +105,8 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
 
 async function getContainerIP(containerName: string): Promise<string | null> {
   try {
-    const dockerService = DockerService.getInstance();
-    const container = dockerService.getDocker().getContainer(containerName);
+    const dockerInstance = new Docker();
+    const container = dockerInstance.getContainer(containerName);
     const data = await container.inspect();
 
     const networks = data.NetworkSettings?.Networks;
@@ -125,8 +122,8 @@ async function getContainerIP(containerName: string): Promise<string | null> {
 
 async function getContainerPorts(containerName: string): Promise<string[]> {
   try {
-    const dockerService = DockerService.getInstance();
-    const container = dockerService.getDocker().getContainer(containerName);
+    const dockerInstance = new Docker();
+    const container = dockerInstance.getContainer(containerName);
     const data = await container.inspect();
 
     const ports: string[] = [];
@@ -156,8 +153,8 @@ async function getContainerStats(containerName: string): Promise<{
   network: string;
 } | null> {
   try {
-    const dockerService = DockerService.getInstance();
-    const container = dockerService.getDocker().getContainer(containerName);
+    const dockerInstance = new Docker();
+    const container = dockerInstance.getContainer(containerName);
 
     const stream = await container.stats({ stream: false });
     const stats = stream as any;
@@ -191,8 +188,8 @@ async function getContainerStats(containerName: string): Promise<{
 
 async function getContainerVolumes(containerName: string): Promise<string[]> {
   try {
-    const dockerService = DockerService.getInstance();
-    const container = dockerService.getDocker().getContainer(containerName);
+    const dockerInstance = new Docker();
+    const container = dockerInstance.getContainer(containerName);
     const data = await container.inspect();
 
     const volumes: string[] = [];
@@ -216,8 +213,8 @@ async function getContainerVolumes(containerName: string): Promise<string[]> {
 
 async function checkContainerHealth(containerName: string): Promise<string> {
   try {
-    const dockerService = DockerService.getInstance();
-    const container = dockerService.getDocker().getContainer(containerName);
+    const dockerInstance = new Docker();
+    const container = dockerInstance.getContainer(containerName);
     const data = await container.inspect();
 
     const health = data.State?.Health;

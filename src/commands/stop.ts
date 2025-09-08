@@ -1,6 +1,6 @@
-import { ComposeService } from '@services/compose.service';
-import { ConfigService } from '@services/config.service';
-import { DockerService } from '@services/docker.service';
+import { CONSTANTS } from '@config/constants';
+import * as compose from '@services/compose';
+import * as docker from '@services/docker';
 import { logger } from '@utils/logger';
 import * as prompt from '@utils/prompt';
 import { Spinner } from '@utils/spinner';
@@ -10,13 +10,9 @@ export interface StopOptions {
 }
 
 export async function stopCommand(options: StopOptions): Promise<void> {
-  const dockerService = DockerService.getInstance();
-  const composeService = ComposeService.getInstance();
-  const config = ConfigService.getInstance();
-
   try {
-    const containerName = config.getDockerConfig().containerName;
-    const containerInfo = await dockerService.getContainerInfo(containerName);
+    const containerName = CONSTANTS.DOCKER.CONTAINER_NAME;
+    const containerInfo = await docker.getContainerInfo(containerName).catch(() => null);
 
     if (!containerInfo || containerInfo.state !== 'running') {
       logger.info('Container is not running');
@@ -35,15 +31,14 @@ export async function stopCommand(options: StopOptions): Promise<void> {
     const spinner = new Spinner('Stopping container...');
     spinner.start();
 
-    const success = await composeService.down();
-
-    if (success) {
+    try {
+      await compose.composeDown();
       spinner.succeed('Container stopped successfully');
-    } else {
-      const forceStop = await dockerService.stopContainer(containerName, true);
-      if (forceStop) {
+    } catch {
+      try {
+        await docker.stopContainer(containerName, true);
         spinner.succeed('Container force-stopped successfully');
-      } else {
+      } catch {
         spinner.fail('Failed to stop container');
         process.exit(1);
       }
