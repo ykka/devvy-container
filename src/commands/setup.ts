@@ -124,13 +124,13 @@ async function setupVSCodeSync(projectRoot: string): Promise<void> {
   const settingsExist = await fs.pathExists(path.join(vscodeConfigDir, 'settings.json'));
 
   if (settingsExist) {
-    const overwrite = await prompt.confirm(`\nOverwrite existing ${editorName} settings with your current configuration?`, false);
+    const overwrite = await prompt.confirm(`Overwrite existing ${editorName} settings with your current configuration?`, false);
 
     if (!overwrite) {
       return;
     }
   } else {
-    const syncEditor = await prompt.confirm(`\nImport ${editorName} settings to the project?`, true);
+    const syncEditor = await prompt.confirm(`Import ${editorName} settings to the project?`, true);
 
     if (!syncEditor) {
       return;

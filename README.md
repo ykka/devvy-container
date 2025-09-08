@@ -175,7 +175,7 @@ claude-docker/
 4. **Verify the container is running:**
    ```bash
    docker ps
-   # Should show 'claude-dev' container running
+   # Should show 'claude-devvy-container' container running
    ```
 
 ## Connecting Cursor to the Container
@@ -185,7 +185,7 @@ claude-docker/
 1. Open Cursor on your Mac
 2. Press `Cmd+Shift+P` to open command palette
 3. Type and select: `Dev Containers: Attach to Running Container`
-4. Choose `claude-dev` from the list
+4. Choose `claude-devvy-container` from the list
 5. Cursor will reopen connected to the container
 
 
@@ -214,10 +214,10 @@ tmux new -s dev
 #### Direct Docker Exec
 ```bash
 # Quick access without SSH
-docker exec -it claude-dev zsh
+docker exec -it claude-devvy-container zsh
 
 # With tmux
-docker exec -it claude-dev tmux new -s dev
+docker exec -it claude-devvy-container tmux new -s dev
 ```
 
 ### First-Time Extension Setup
@@ -226,7 +226,7 @@ After connecting to the container, install your Cursor extensions:
 
 ```bash
 # Method 1: Via Docker exec
-docker exec -it claude-dev bash -c "
+docker exec -it claude-devvy-container bash -c "
 while read ext; do
   [[ \$ext =~ ^#.*$ || -z \$ext ]] && continue
   code --install-extension \$ext 2>/dev/null || true
@@ -303,7 +303,7 @@ When npm installs packages with native bindings (like `esbuild`, `sharp`, `node-
 
 ```bash
 # Always run these commands inside the container:
-docker exec -it claude-dev bash
+docker exec -it claude-devvy-container bash
 npm install
 npm run build
 npm run dev
@@ -332,7 +332,7 @@ cd ~/<your-repos-directory>/claude-docker
 docker-compose start
 
 # Option 1: Connect via Cursor
-# Open Cursor → Cmd+Shift+P → Attach to Running Container → claude-dev
+# Open Cursor → Cmd+Shift+P → Attach to Running Container → claude-devvy-container
 
 # Option 2: SSH with tmux for terminal work
 ssh -p 2222 devvy@localhost -i ~/.ssh/claude_docker_rsa
@@ -364,7 +364,7 @@ Access on Mac: `http://localhost:3000`
 
 ```bash
 # Inside the container
-docker exec -it claude-dev bash
+docker exec -it claude-devvy-container bash
 claude
 
 # Or with specific directory
@@ -460,7 +460,7 @@ docker-compose down
 rm -rf node_modules package-lock.json
 
 # Inside container:
-docker exec -it claude-dev bash
+docker exec -it claude-devvy-container bash
 npm install
 ```
 
@@ -468,7 +468,7 @@ npm install
 
 ```bash
 # Reinstall extensions in container
-docker exec -it claude-dev bash
+docker exec -it claude-devvy-container bash
 /home/devvy/vscode-config/install-vscode-extensions.sh
 ```
 

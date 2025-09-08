@@ -1,12 +1,12 @@
 version: '3.8'
 
 services:
-  claude-dev:
+  claude-devvy-container:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: claude-dev
-    hostname: claude-dev
+    container_name: claude-devvy-container
+    hostname: claude-devvy-container
     cap_add:
       - NET_ADMIN  # For firewall rules
       - NET_RAW    # For iptables

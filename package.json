@@ -4,7 +4,7 @@
   "description": "Devvy - Development Environment CLI",
   "main": "dist/index.js",
   "bin": {
-    "devvy": "./devvy-ts"
+    "devvy": "./devvy"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -13,7 +13,7 @@
     "build:watch": "tsc --watch",
     "clean": "rimraf dist",
     "compile": "npm run build && npm run make-executable",
-    "make-executable": "chmod +x devvy-ts && echo '#!/usr/bin/env node' | cat - dist/index.js > temp && mv temp devvy-ts",
+    "make-executable": "chmod +x devvy && echo '#!/usr/bin/env node' | cat - dist/index.js > temp && mv temp devvy",
     "lint": "biome lint",
     "lint:fix": "biome lint --write",
     "format": "biome format --write",

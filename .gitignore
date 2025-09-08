@@ -6,3 +6,5 @@ node_modules
 dist
 # Devvy configuration
 devvy.config.json
+# Devvy executable (generated)
+devvy
