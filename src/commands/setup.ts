@@ -75,7 +75,7 @@ async function createDirectories(projectRoot: string): Promise<void> {
   const spinner = new Spinner('Creating project directories...');
   spinner.start();
 
-  const directories = [CONSTANTS.HOST_PATHS.SECRETS_DIR, CONSTANTS.HOST_PATHS.VSCODE_CONFIG_DIR, 'setup-scripts', 'container-scripts'];
+  const directories = [CONSTANTS.HOST_PATHS.SECRETS_DIR, CONSTANTS.HOST_PATHS.VSCODE_CONFIG_DIR, 'container-scripts'];
 
   for (const dir of directories) {
     const dirPath = path.join(projectRoot, dir);
