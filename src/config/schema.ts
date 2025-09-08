@@ -71,7 +71,6 @@ export const configSchema = z.object({
     .object({
       settingsPath: z.string().optional(),
       extensionsPath: z.string().optional(),
-      syncEnabled: z.boolean().default(CONSTANTS.VSCODE.SYNC_ENABLED),
     })
     .default({}),
   logging: z

@@ -33,11 +33,6 @@ export const CONSTANTS = {
     CONTAINER_SCRIPTS_DIR: 'container-scripts',
   },
 
-  // VS Code configuration
-  VSCODE: {
-    SYNC_ENABLED: true,
-  },
-
   // Command execution
   COMMANDS: {
     TIMEOUT: 30_000,

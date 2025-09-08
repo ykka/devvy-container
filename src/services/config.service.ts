@@ -367,12 +367,6 @@ export class ConfigService {
     };
   }
 
-  public getVscodeConfig() {
-    return {
-      syncEnabled: CONSTANTS.VSCODE.SYNC_ENABLED,
-    };
-  }
-
   public getLoggingConfig() {
     return {
       level: CONSTANTS.LOGGING.LEVEL,
