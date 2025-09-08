@@ -1,10 +1,10 @@
 export const CONSTANTS = {
-  APP_NAME: 'claude-docker-cli',
+  APP_NAME: 'devvy-cli',
   VERSION: '2.0.0',
 
   CONTAINER: {
-    NAME: 'claude-dev',
-    IMAGE: 'claude-dev-image',
+    NAME: 'claude-devvy-container',
+    IMAGE: 'claude-devvy-image',
     WORKSPACE_PATH: '/home/developer/projects',
     DEFAULT_PORT: 2222,
   },
@@ -32,6 +32,6 @@ export const CONSTANTS = {
 
   LOGGING: {
     LEVEL: process.env.LOG_LEVEL || 'info',
-    FILE: 'claude-docker.log',
+    FILE: 'devvy.log',
   },
-} as const
+} as const;

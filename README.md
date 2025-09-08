@@ -1,8 +1,8 @@
-# Claude Docker Development Environment
+# Devvy - Development Environment Container
 
 **Tested on macOS with Cursor IDE**
 
-> An exploration in secure AI-assisted development: Running Claude Code safely in an isolated Docker container while maintaining a productive development workflow.
+> An exploration in secure AI-assisted development: Running development tools safely in an isolated Docker container while maintaining a productive development workflow.
 
 ## Why This Exists: The Security Challenge
 

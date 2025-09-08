@@ -1,15 +1,23 @@
-# Claude Development Environment - TypeScript Migration
+# Devvy - TypeScript Migration
 
 ## Project Overview
 This is a Docker-based development environment CLI that's being migrated from bash scripts to TypeScript for improved maintainability, type safety, and developer experience.
+
+## Linear Project Information
+- **Project Name**: Devvy
+- **Project ID**: daa4f946-2c47-4d82-bf03-b12a05058a3e
+- **Project URL**: https://linear.app/ykka/project/devvy-a2ce8c9a5ebb
+- **Description**: claude-devvy-container is a safe container for running Claude Code and connecting via Cursor/VS Code to it with some extras.
+- **Lead**: Patryk Kabaj
 
 ## Key Commands to Run
 
 ### Linting and Type Checking
 ```bash
-npm run lint        # Run ESLint
+npm run lint        # Run Biome linter
+npm run format      # Format code with Biome
 npm run typecheck   # Run TypeScript type checking
-npm run quality     # Run all quality checks
+npm run quality     # Run all quality checks (lint + typecheck)
 ```
 
 ### Building
@@ -25,6 +33,10 @@ devvy start         # Start the development container
 devvy connect       # Connect to the container via SSH
 devvy rebuild       # Rebuild container (handles SSH known hosts automatically)
 devvy stop          # Stop the container
+devvy status        # Check container and services status
+devvy logs          # View container logs
+devvy sync          # Sync local changes to container
+devvy cleanup       # Clean up Docker resources
 ```
 
 ## Project Structure
@@ -48,9 +60,10 @@ npm run quality
 ```
 
 ## Important Notes
-- The project maintains backward compatibility during migration
+- The project has transitioned from ESLint/Prettier to Biome for linting and formatting
 - Container scripts remain as bash for lightweight container initialization
 - All TypeScript code follows strict mode for maximum type safety
+- New services added: SSH service for container connection management, VS Code service for IDE integration
 
 ## Environment Variable Handling
 The setup command now:
@@ -65,3 +78,40 @@ The rebuild command automatically:
 - Removes old entries from ~/.ssh/known_hosts
 - Notifies user they'll need to verify the new host key on next connection
 - Prevents SSH connection errors after container rebuilds
+
+## Code Style and Conventions
+
+### Use Functions and Modules Instead of Classes
+- Prefer exporting individual functions from modules rather than static class methods
+- Example: Use `export function exec()` instead of `export class Shell { static exec() }`
+- This makes the code more tree-shakeable and follows modern JavaScript patterns
+
+### Template Literals Over String Concatenation
+- Always use template literals for string interpolation
+- Example: Use `` `Run ${chalk.cyan('devvy start')}` `` instead of `'Run ' + chalk.cyan('devvy start')`
+
+### Avoid Non-Null Assertions
+- Instead of using `!` (non-null assertion), add proper checks
+- Example: Use `if (array.length === 0) throw new Error()` before accessing `array[0]`
+
+### Import Patterns
+- For utility modules with multiple exports, use namespace imports: `import * as prompt from '@utils/prompt'`
+- For specific functions, use named imports: `import { exec, commandExists } from '@utils/shell'`
+
+### Biome Linting Rules to Remember
+- `lint/style/useTemplate`: Prefer template literals over string concatenation
+- `lint/style/noNonNullAssertion`: Avoid non-null assertions
+- `lint/complexity/noStaticOnlyClass`: Avoid classes with only static members
+
+### Quality Checks
+Always run these before committing:
+```bash
+npm run quality     # Runs both typecheck and lint
+npm run format      # Auto-formats code with Biome
+```
+
+### Common Mistakes to Avoid
+1. Don't use string concatenation for building strings with variables
+2. Don't use non-null assertions (!) without proper checks
+3. Don't create classes with only static methods - use functions instead
+4. Always run quality checks before assuming code is ready

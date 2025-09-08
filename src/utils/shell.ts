@@ -1,97 +1,139 @@
-import { execa, type ExecaChildProcess, type Options as ExecaOptions } from 'execa'
-import which from 'which'
-
-import { logger } from './logger'
+import { logger } from '@utils/logger';
+import { type ExecaReturnValue, execa, type Options } from 'execa';
 
 export interface ShellResult {
-  stdout: string
-  stderr: string
-  exitCode: number
-  success: boolean
+  success: boolean;
+  stdout: string;
+  stderr: string;
+  exitCode?: number;
+  error?: Error;
 }
 
-export class Shell {
-  public static async exec(
-    command: string,
-    args: string[] = [],
-    options: ExecaOptions = {}
-  ): Promise<ShellResult> {
-    try {
-      logger.debug(`Executing: ${command} ${args.join(' ')}`)
+export interface CommandResult extends ShellResult {
+  command: string;
+  args: string[];
+}
 
-      const result = await execa(command, args, {
-        ...options,
-        reject: false,
-      })
+export interface ShellOptions extends Options {
+  silent?: boolean;
+  throwOnError?: boolean;
+  timeout?: number;
+}
 
-      return {
-        stdout: result.stdout,
-        stderr: result.stderr,
-        exitCode: result.exitCode,
-        success: result.exitCode === 0,
-      }
-    } catch (error) {
-      logger.error(`Command failed: ${command}`, error)
-      throw error
-    }
-  }
-
-  public static async execInteractive(
-    command: string,
-    args: string[] = [],
-    options: ExecaOptions = {}
-  ): Promise<number> {
-    try {
-      logger.debug(`Executing interactive: ${command} ${args.join(' ')}`)
-
-      const result = await execa(command, args, {
-        ...options,
-        stdio: 'inherit',
-        reject: false,
-      })
-
-      return result.exitCode
-    } catch (error) {
-      logger.error(`Interactive command failed: ${command}`, error)
-      throw error
-    }
-  }
-
-  public static spawn(
-    command: string,
-    args: string[] = [],
-    options: ExecaOptions = {}
-  ): ExecaChildProcess {
-    logger.debug(`Spawning: ${command} ${args.join(' ')}`)
-
-    return execa(command, args, {
+export async function exec(command: string, args: string[] = [], options: Options = {}): Promise<ShellResult> {
+  try {
+    const result = await execa(command, args, {
       ...options,
-      buffer: false,
-    })
+      reject: false,
+    });
+
+    return {
+      success: result.exitCode === 0,
+      stdout: result.stdout || '',
+      stderr: result.stderr || '',
+      exitCode: result.exitCode || 0,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      stdout: '',
+      stderr: error instanceof Error ? error.message : String(error),
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
+  }
+}
+
+export async function execSilent(command: string, args: string[] = []): Promise<ShellResult> {
+  return exec(command, args, { stdio: 'pipe' });
+}
+
+export async function run(command: string, options: ShellOptions = {}): Promise<CommandResult> {
+  const { silent = false, throwOnError = false, ...execaOptions } = options;
+
+  const [cmd, ...args] = command.split(' ');
+
+  if (!silent) {
+    logger.command(command);
   }
 
-  public static async commandExists(command: string): Promise<boolean> {
-    try {
-      await which(command)
-      return true
-    } catch {
-      return false
-    }
+  if (!cmd) {
+    throw new Error('Command cannot be empty');
   }
 
-  public static async requireCommand(command: string, message?: string): Promise<void> {
-    if (!(await this.commandExists(command))) {
-      const errorMessage = message || `Required command '${command}' is not installed`
-      logger.error(errorMessage)
-      throw new Error(errorMessage)
-    }
-  }
+  try {
+    const result: ExecaReturnValue = await execa(cmd, args, {
+      ...execaOptions,
+      reject: false,
+      shell: true,
+    });
 
-  public static async getCommandPath(command: string): Promise<string | null> {
-    try {
-      return await which(command)
-    } catch {
-      return null
+    const shellResult: CommandResult = {
+      success: result.exitCode === 0,
+      stdout: result.stdout || '',
+      stderr: result.stderr || '',
+      exitCode: result.exitCode || 0,
+      command: cmd || '',
+      args,
+    };
+
+    if (!shellResult.success && throwOnError) {
+      const error = new Error(`Command failed with exit code ${shellResult.exitCode}: ${command}`);
+      throw error;
     }
+
+    return shellResult;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    if (throwOnError) {
+      throw error;
+    }
+
+    return {
+      success: false,
+      stdout: '',
+      stderr: errorMessage,
+      error: error instanceof Error ? error : new Error(errorMessage),
+      command: cmd || '',
+      args,
+    };
   }
+}
+
+export async function which(command: string): Promise<string | null> {
+  try {
+    const result = await exec('which', [command]);
+    return result.success ? result.stdout.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isCommandAvailable(command: string): Promise<boolean> {
+  return which(command).then((path) => path !== null);
+}
+
+export async function commandExists(command: string): Promise<boolean> {
+  return isCommandAvailable(command);
+}
+
+export async function execInteractive(command: string, args: string[] = [], options: Options = {}): Promise<number> {
+  try {
+    logger.debug(`Executing interactive: ${command} ${args.join(' ')}`);
+
+    const result = await execa(command, args, {
+      ...options,
+      stdio: 'inherit',
+      reject: false,
+    });
+
+    return result.exitCode || 0;
+  } catch (error) {
+    logger.error(`Interactive command failed: ${command}`, error);
+    throw error;
+  }
+}
+
+export async function execAsync(command: string, args: string[] = [], options: Options = {}): Promise<ShellResult> {
+  return exec(command, args, options);
 }
