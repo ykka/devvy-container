@@ -26,7 +26,7 @@ export async function connectCommand(options: ConnectOptions): Promise<void> {
     }
 
     const sshConfig = config.getSshConfig();
-    const sshKeyPath = sshConfig.keyPath || path.join(process.cwd(), CONSTANTS.HOST_PATHS.SECRETS_DIR, CONSTANTS.SSH.KEY_NAME);
+    const sshKeyPath = path.join(process.cwd(), CONSTANTS.HOST_PATHS.SECRETS_DIR, CONSTANTS.SSH.KEY_NAME);
 
     if (!(await fs.pathExists(sshKeyPath))) {
       logger.error(`SSH key not found at: ${sshKeyPath}`);

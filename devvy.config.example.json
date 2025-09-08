@@ -18,5 +18,22 @@
     "tmux": {
       "readOnlyConfigPath": "~/.config/tmux"
     }
+  },
+  "firewall": {
+    "allowedDomains": [
+      "docs.anthropic.com",
+      "nextjs.org",
+      "reactjs.org",
+      "nodejs.org",
+      "developer.mozilla.org",
+      "stackoverflow.com",
+      "github.com",
+      "npmjs.com",
+      "typescript-eslint.io",
+      "eslint.org",
+      "prettier.io",
+      "vitejs.dev",
+      "webpack.js.org"
+    ]
   }
 }

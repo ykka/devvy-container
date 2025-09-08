@@ -38,39 +38,6 @@ export const devvyConfigSchema = z.object({
       })
       .optional(),
   }),
-  docker: z
-    .object({
-      composeFile: z.string().default(CONSTANTS.DOCKER.COMPOSE_FILE),
-      projectName: z.string().default(CONSTANTS.DOCKER.PROJECT_NAME),
-      containerName: z.string().default(CONSTANTS.DOCKER.CONTAINER_NAME),
-    })
-    .default({}),
-  ssh: z
-    .object({
-      port: z.number().default(CONSTANTS.SSH.PORT),
-      keyPath: z.string().optional(),
-      user: z.string().default(CONSTANTS.CONTAINER_USER.NAME),
-    })
-    .default({}),
-  workspace: z
-    .object({
-      hostPath: z.string().optional(),
-      mountPath: z.string().default(CONSTANTS.CONTAINER_USER.REPOS_PATH),
-    })
-    .default({}),
-  vscode: z
-    .object({
-      settingsPath: z.string().optional(),
-      extensionsPath: z.string().optional(),
-      syncEnabled: z.boolean().default(CONSTANTS.VSCODE.SYNC_ENABLED),
-    })
-    .default({}),
-  logging: z
-    .object({
-      level: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
-      file: z.string().optional(),
-    })
-    .default({}),
   firewall: z
     .object({
       allowedDomains: z
@@ -379,24 +346,37 @@ export class ConfigService {
     return this.envConfig;
   }
 
-  public getDockerConfig(): DevvyConfig['docker'] {
-    return this.get().docker;
+  public getDockerConfig() {
+    return {
+      composeFile: CONSTANTS.DOCKER.COMPOSE_FILE,
+      projectName: CONSTANTS.DOCKER.PROJECT_NAME,
+      containerName: CONSTANTS.DOCKER.CONTAINER_NAME,
+    };
   }
 
-  public getSshConfig(): DevvyConfig['ssh'] {
-    return this.get().ssh;
+  public getSshConfig() {
+    return {
+      port: CONSTANTS.SSH.PORT,
+      user: CONSTANTS.CONTAINER_USER.NAME,
+    };
   }
 
-  public getWorkspaceConfig(): DevvyConfig['workspace'] {
-    return this.get().workspace;
+  public getWorkspaceConfig() {
+    return {
+      mountPath: CONSTANTS.CONTAINER_USER.REPOS_PATH,
+    };
   }
 
-  public getVscodeConfig(): DevvyConfig['vscode'] {
-    return this.get().vscode;
+  public getVscodeConfig() {
+    return {
+      syncEnabled: CONSTANTS.VSCODE.SYNC_ENABLED,
+    };
   }
 
-  public getLoggingConfig(): DevvyConfig['logging'] {
-    return this.get().logging;
+  public getLoggingConfig() {
+    return {
+      level: CONSTANTS.LOGGING.LEVEL,
+    };
   }
 
   public getFirewallConfig(): DevvyConfig['firewall'] {

@@ -62,14 +62,7 @@ class Logger {
       ],
     });
 
-    if (loggingConfig.file) {
-      this.logger.add(
-        new winston.transports.File({
-          filename: loggingConfig.file,
-          format: combine(timestamp(), customFormat),
-        }),
-      );
-    }
+    // File logging disabled since it's not user-configurable
   }
 
   public static getInstance(): Logger {
