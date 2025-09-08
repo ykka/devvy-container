@@ -113,7 +113,7 @@ fi
 # Start SSH daemon
 if [ "$1" = "/usr/sbin/sshd" ]; then
     echo "Starting SSH daemon..."
-    # Generate host keys if they don't exist
+    # Generate SSH server keys for the container if they don't exist
     if [ ! -f /etc/ssh/ssh_host_ed25519_key ]; then
         ssh-keygen -t ed25519 -f /etc/ssh/ssh_host_ed25519_key -N ""
     fi
@@ -122,7 +122,7 @@ if [ "$1" = "/usr/sbin/sshd" ]; then
     fi
     
     echo "Container ready! SSH available on port 22"
-    echo "Host key fingerprint:"
+    echo "Container's SSH server key fingerprint:"
     ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
     
     # Start sshd in foreground
