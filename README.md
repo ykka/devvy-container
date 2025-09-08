@@ -395,7 +395,6 @@ GIT_USER_EMAIL="you@email.com"
 
 # Optional
 GITHUB_TOKEN=ghp_...        # For GitHub CLI
-DATABASE_URL=postgres://... # Database connections
 LINEAR_API_KEY=lin_api_...  # Linear integration
 ```
 
@@ -417,9 +416,6 @@ To update settings:
 |------------|---------|--------|
 | 2222 | SSH access | `ssh -p 2222 devvy@localhost` |
 | 3000-3010 | Dev servers | `http://localhost:3000` |
-| 5432 | PostgreSQL | `postgresql://localhost:5432` |
-| 27017 | MongoDB | `mongodb://localhost:27017` |
-| 6379 | Redis | `redis://localhost:6379` |
 
 ## Troubleshooting
 
@@ -497,11 +493,6 @@ Structure your projects:
 
 All accessible in container at `/home/devvy/claudespace/`
 
-### Database Connections
-
-Databases running on your Mac are accessible from container:
-- Use `host.docker.internal` as hostname
-- Or use the mapped ports (5432, 27017, etc.)
 
 ### Custom Scripts
 

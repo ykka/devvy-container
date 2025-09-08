@@ -15,14 +15,6 @@ export interface DevvyConfig {
       apiKey: string;
     };
   };
-  databases?: {
-    postgresql?: string;
-    mongodb?: string;
-    supabase?: {
-      url: string;
-      anonKey: string;
-    };
-  };
   editor: {
     lazyvim?: {
       enabled: boolean;
@@ -112,22 +104,6 @@ export class ConfigManager {
     if (config.integrations.linear?.apiKey) {
       envLines.push('# Linear Integration');
       envLines.push(`LINEAR_API_KEY=${config.integrations.linear.apiKey}`);
-      envLines.push('');
-    }
-
-    // Databases
-    if (config.databases) {
-      envLines.push('# Database Connections');
-      if (config.databases.postgresql) {
-        envLines.push(`DATABASE_URL=${config.databases.postgresql}`);
-      }
-      if (config.databases.mongodb) {
-        envLines.push(`MONGODB_URI=${config.databases.mongodb}`);
-      }
-      if (config.databases.supabase) {
-        envLines.push(`SUPABASE_URL=${config.databases.supabase.url}`);
-        envLines.push(`SUPABASE_ANON_KEY=${config.databases.supabase.anonKey}`);
-      }
       envLines.push('');
     }
 

@@ -113,10 +113,7 @@ RUN chmod +x /usr/local/bin/*.sh
 # 22            - SSH access to the container
 # 60000-60010/udp - UDP ports for development tools or custom services (e.g., debugging, tunnels)
 # 3000-3010     - Common range for web app development servers (e.g., Node.js, React, etc.)
-# 5432          - PostgreSQL database
-# 27017         - MongoDB database
-# 6379          - Redis server
-EXPOSE 22 60000-60010/udp 3000-3010 5432 27017 6379
+EXPOSE 22 60000-60010/udp 3000-3010
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D"]

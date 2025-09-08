@@ -8,14 +8,6 @@
       "apiKey": ""
     }
   },
-  "databases": {
-    "postgresql": "",
-    "mongodb": "",
-    "supabase": {
-      "url": "",
-      "anonKey": ""
-    }
-  },
   "editor": {
     "lazyvim": {
       "enabled": true,

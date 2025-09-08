@@ -13,12 +13,6 @@ export const envSchema = z.object({
   GITHUB_TOKEN: z.string().optional(),
   LINEAR_API_KEY: z.string().optional(),
 
-  // Database URLs
-  DATABASE_URL: z.string().optional(),
-  MONGODB_URI: z.string().optional(),
-  SUPABASE_URL: z.string().optional(),
-  SUPABASE_ANON_KEY: z.string().optional(),
-
   // Docker/System (for backward compatibility)
   DOCKER_HOST: z.string().optional(),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),

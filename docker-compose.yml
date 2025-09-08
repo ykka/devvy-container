@@ -89,11 +89,6 @@ services:
       GIT_USER_EMAIL: ${GIT_USER_EMAIL}
       GITHUB_TOKEN: ${GITHUB_TOKEN}
       LINEAR_API_KEY: ${LINEAR_API_KEY}
-      # Database URLs (if needed)
-      DATABASE_URL: ${DATABASE_URL}
-      MONGODB_URI: ${MONGODB_URI}
-      SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
       PLAYWRIGHT_BROWSERS_PATH: /home/devvy/.cache/ms-playwright
       # X11 forwarding for GUI applications
       DISPLAY: host.docker.internal:0

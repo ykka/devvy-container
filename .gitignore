@@ -1,10 +1,17 @@
-.env.local
+# Devvy executable (generated)
+devvy
+
+# Secrets for SSH keygen files
 secrets/
+
+# Devvy configuration
+devvy.config.json
+
+# ENV file (generated)
+env
+
+# Logs and typical things
 *.log
 .DS_Store
 node_modules
 dist
-# Devvy configuration
-devvy.config.json
-# Devvy executable (generated)
-devvy

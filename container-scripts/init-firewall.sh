@@ -30,15 +30,6 @@ iptables -A OUTPUT -p tcp --dport 22 -j ACCEPT
 iptables -A OUTPUT -p tcp --dport 443 -j ACCEPT
 iptables -A OUTPUT -p tcp --dport 80 -j ACCEPT
 
-# Allow PostgreSQL/Supabase (postgres:// protocol)
-iptables -A OUTPUT -p tcp --dport 5432 -j ACCEPT
-iptables -A OUTPUT -p tcp --dport 5433 -j ACCEPT  # Alternative PostgreSQL port
-
-# Allow MongoDB connections
-iptables -A OUTPUT -p tcp --dport 27017 -j ACCEPT
-
-# Allow Redis
-iptables -A OUTPUT -p tcp --dport 6379 -j ACCEPT
 
 # Fetch and allow GitHub IPs
 echo "Adding GitHub to allowed domains..."
@@ -63,7 +54,6 @@ for domain in \
     prettier.io \
     vitejs.dev \
     webpack.js.org \
-    supabase.com
 do
     # Resolve all A and AAAA records for the domain and add to ipset
     for ip in $(dig +short A $domain) $(dig +short AAAA $domain); do

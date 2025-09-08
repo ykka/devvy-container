@@ -28,7 +28,7 @@ npm run dev         # Run in development mode with hot reload
 
 ### CLI Usage
 ```bash
-devvy setup         # Initial setup wizard (collects env variables interactively)
+devvy setup         # Initial setup wizard (collects configuration interactively)
 devvy start         # Start the development container
 devvy connect       # Connect to the container via SSH
 devvy rebuild       # Rebuild container (handles SSH known hosts automatically)
@@ -67,7 +67,7 @@ npm run quality
 
 ## Environment Variable Handling
 The setup command now:
-- Interactively collects optional environment variables (GitHub token, Linear API key, database URLs)
+- Interactively collects optional configuration (GitHub token, Linear API key, editor settings)
 - Preserves existing values when re-running setup
 - Only prompts for updates when values already exist
 - Automatically detects user/group IDs and git configuration

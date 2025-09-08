@@ -246,63 +246,9 @@ async function setupDevvyConfig(_projectRoot: string): Promise<void> {
     }
   }
 
-  // Step 3: Databases
-  let databases: DevvyConfig['databases'] | undefined;
-  const useDatabases = await prompt.confirm('Would you like to configure database connections?', !!existingConfig?.databases);
+  // Step 3: LazyVim
 
-  if (useDatabases) {
-    databases = {};
-
-    // PostgreSQL
-    const usePostgres = await prompt.confirm('Configure PostgreSQL connection?', !!existingConfig?.databases?.postgresql);
-    if (usePostgres) {
-      const url =
-        existingConfig?.databases?.postgresql ||
-        (await prompt.input({
-          message: 'PostgreSQL DATABASE_URL:',
-          default: '',
-        }));
-      if (url) {
-        databases.postgresql = url;
-      }
-    }
-
-    // MongoDB
-    const useMongo = await prompt.confirm('Configure MongoDB connection?', !!existingConfig?.databases?.mongodb);
-    if (useMongo) {
-      const uri =
-        existingConfig?.databases?.mongodb ||
-        (await prompt.input({
-          message: 'MongoDB URI:',
-          default: '',
-        }));
-      if (uri) {
-        databases.mongodb = uri;
-      }
-    }
-
-    // Supabase
-    const useSupabase = await prompt.confirm('Configure Supabase connection?', !!existingConfig?.databases?.supabase);
-    if (useSupabase) {
-      const url =
-        existingConfig?.databases?.supabase?.url ||
-        (await prompt.input({
-          message: 'Supabase URL:',
-          default: '',
-        }));
-      const anonKey =
-        existingConfig?.databases?.supabase?.anonKey ||
-        (await prompt.input({
-          message: 'Supabase Anon Key:',
-          default: '',
-        }));
-      if (url && anonKey) {
-        databases.supabase = { url, anonKey };
-      }
-    }
-  }
-
-  // Step 4: LazyVim
+  // Step 3: LazyVim
   const editor: DevvyConfig['editor'] = {};
   const installLazyvim = await prompt.confirm('Would you like to install LazyVim in the container?', existingConfig?.editor?.lazyvim?.enabled ?? true);
 
@@ -338,7 +284,7 @@ async function setupDevvyConfig(_projectRoot: string): Promise<void> {
     };
   }
 
-  // Step 5: Tmux
+  // Step 4: Tmux
   const terminal: DevvyConfig['terminal'] = {};
   const useTmux = await prompt.confirm('Would you like to use your existing tmux configuration?', !!existingConfig?.terminal?.tmux?.readOnlyConfigPath);
 
@@ -363,7 +309,6 @@ async function setupDevvyConfig(_projectRoot: string): Promise<void> {
   const config: DevvyConfig = {
     projectsPath,
     integrations,
-    databases,
     editor,
     terminal,
   };
@@ -380,7 +325,7 @@ async function setupDevvyConfig(_projectRoot: string): Promise<void> {
     // Update .gitignore to exclude the config file
     const gitignorePath = path.join(_projectRoot, '.gitignore');
     const gitignoreContent = await fs.readFile(gitignorePath, 'utf8');
-    const configFiles = ['devvy.config.json', '.env', '.env.local'];
+    const configFiles = ['devvy.config.json', '.env'];
     const linesToAdd: string[] = [];
 
     for (const file of configFiles) {
