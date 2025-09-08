@@ -39,11 +39,11 @@ else
     echo "Git config is read-only, skipping git configuration"
 fi
 
-# Install LazyVim if requested
-if [ "$INSTALL_LAZYVIM" = "true" ] && [ ! -d "/home/devvy/.config/nvim_local" ]; then
-    echo "Installing LazyVim..."
-    su - devvy -c 'git clone https://github.com/LazyVim/starter /home/devvy/.config/nvim_local'
-    su - devvy -c 'rm -rf /home/devvy/.config/nvim_local/.git'
+# Install LazyVim plugins if config is mounted
+if [ -d "/home/devvy/.config/nvim" ] && [ -f "/home/devvy/.config/nvim/init.lua" ]; then
+    echo "Neovim config detected, installing plugins..."
+    # Since config is read-only, plugins will be installed to ~/.local/share/nvim
+    su - devvy -c 'nvim --headless "+Lazy! sync" +qa' || echo "Plugin installation completed or skipped"
 fi
 
 # Install VS Code/Cursor extensions from extensions.txt
