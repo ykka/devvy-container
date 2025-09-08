@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  claude-devvy-container:
+  devcontainer:
     build:
       context: .
       dockerfile: Dockerfile
@@ -11,20 +9,20 @@ services:
     container_name: claude-devvy-container
     hostname: claude-devvy-container
     cap_add:
-      - NET_ADMIN  # For firewall rules
-      - NET_RAW    # For iptables
+      - NET_ADMIN # For firewall rules
+      - NET_RAW # For iptables
     security_opt:
       - no-new-privileges:true
     ports:
-      - "2222:22"                    # SSH
+      - "2222:22" # SSH
       - "60000-60010:60000-60010/udp" # Mosh
-      - "3000-3010:3000-3010"        # Dev servers
+      - "3000-3010:3000-3010" # Dev servers
     volumes:
       # Projects directory from configuration
       - type: bind
         source: ${PROJECTS_PATH}
         target: /home/devvy/repos
-        consistency: delegated  # Mac optimization
+        consistency: delegated # Mac optimization
 
       # LazyVim config (conditional, read-only)
       - type: bind
@@ -106,3 +104,4 @@ volumes:
   claude-code-data:
   vscode-server:
   vscode-server-insiders:
+

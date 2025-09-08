@@ -68,8 +68,8 @@ claude-devvy-container/
 │   └── config/       # Configuration management
 ├── container-scripts/# Container initialization scripts
 ├── secrets/          # SSH keys (git-ignored)
-│   ├── container_rsa     # Private key for SSH access
-│   ├── container_rsa.pub # Public key
+│   ├── host_rsa          # Private key on local machine for SSH access to the container
+│   ├── host_rsa.pub      # Public key
 │   └── authorized_keys   # Container's authorized keys
 ├── vscode-config/    # VS Code settings (copied during setup)
 └── .env             # Configuration (created during setup)
@@ -120,7 +120,7 @@ npm install  # This creates macOS binaries that won't work in Linux container
 
 ```bash
 # Connect via SSH
-ssh -p 2222 devvy@localhost -i ./secrets/container_rsa
+ssh -p 2222 devvy@localhost -i ./secrets/host_rsa
 
 # Or use the CLI (recommended)
 devvy connect
