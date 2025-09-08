@@ -41,13 +41,10 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
       spinner.succeed('Container stopped');
     }
 
-    // Step 2: Clean up SSH known hosts before rebuild
-    const sshSpinner = new Spinner('Managing SSH configuration...');
-    sshSpinner.start();
-    await sshService.manageKnownHosts('remove', 'localhost', sshConfig.port);
-    sshSpinner.succeed('SSH known hosts cleaned up');
+    // Step 2: Handle container SSH key removal before rebuild
+    await sshService.updateContainerKeyForRebuild('localhost', sshConfig.port);
 
-    // Step 3: Remove old container
+    // Step 4: Remove old container
     if (containerInfo) {
       const spinner = new Spinner('Removing old container...');
       spinner.start();
@@ -55,7 +52,7 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
       spinner.succeed('Old container removed');
     }
 
-    // Step 4: Build new image
+    // Step 5: Build new image
     logger.info('\n📦 Building new container image...\n');
 
     const buildSuccess = await compose.build({ noCache: options.noCache });
@@ -66,7 +63,7 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
 
     logger.success('✨ Container image rebuilt successfully');
 
-    // Step 5: Start new container
+    // Step 6: Start new container
     const startSpinner = new Spinner('Starting new container...');
     startSpinner.start();
 
@@ -78,7 +75,7 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
 
     startSpinner.succeed('Container started');
 
-    // Step 6: Wait for container to be ready
+    // Step 7: Wait for container to be ready
     const containerReadySpinner = new Spinner('Waiting for container to be ready...');
     containerReadySpinner.start();
 
@@ -106,12 +103,14 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
 
     containerReadySpinner.succeed('Container is ready');
 
-    // Step 7: Add new SSH host key to known hosts
-    const keySpinner = new Spinner('Adding new SSH host key...');
-    keySpinner.start();
+    // Step 8: Add container's new SSH key to host's known_hosts
+    console.log(`\n${chalk.blue("Adding container's new SSH key to host's known_hosts...")}`);
+    const sshAdded = await sshService.addContainerSSHKeyToHostKnownHosts('localhost', sshConfig.port);
 
-    await sshService.manageKnownHosts('add', 'localhost', sshConfig.port);
-    keySpinner.succeed('New SSH host key added to known hosts');
+    if (!sshAdded) {
+      logger.warn("Container's SSH key was not added to host's known_hosts.");
+      logger.info("You will be prompted to verify the container's SSH key on first connection.");
+    }
 
     // Step 9: Verify container is healthy
     const healthSpinner = new Spinner('Verifying container health...');

@@ -63,7 +63,7 @@ export async function startCommand(options: StartOptions): Promise<void> {
     spinner.next();
 
     const sshCfg = config.getSshConfig();
-    await sshService.manageKnownHosts('remove', 'localhost', sshCfg.port);
+    await sshService.removeContainerSSHKeyFromHostKnownHosts('localhost', sshCfg.port);
     spinner.next();
 
     const success = await composeService.up({
@@ -77,7 +77,7 @@ export async function startCommand(options: StartOptions): Promise<void> {
     }
     spinner.next();
 
-    await sshService.manageKnownHosts('add', 'localhost', sshCfg.port);
+    await sshService.addContainerSSHKeyToHostKnownHosts('localhost', sshCfg.port);
     spinner.next();
 
     await new Promise((resolve) => setTimeout(resolve, 2000));

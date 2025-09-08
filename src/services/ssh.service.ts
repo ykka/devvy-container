@@ -4,7 +4,9 @@ import * as path from 'node:path';
 import { CONSTANTS } from '@config/constants';
 import { ConfigService } from '@services/config.service';
 import { logger } from '@utils/logger';
+import * as prompt from '@utils/prompt';
 import { execAsync } from '@utils/shell';
+import chalk from 'chalk';
 import * as fs from 'fs-extra';
 
 export class SSHService {
@@ -26,18 +28,23 @@ export class SSHService {
     return SSHService.instance;
   }
 
-  public async generateSSHKey(): Promise<{
+  /**
+   * Generate host SSH key pair on the local machine for connecting to the container.
+   * The private key stays on the local machine, public key goes to container's authorized_keys.
+   */
+  public async generateHostSSHKey(): Promise<{
     publicKey: string;
     privateKey: string;
   }> {
-    const keyName = 'container_rsa';
+    const keyName = CONSTANTS.SSH.KEY_NAME;
     const privateKeyPath = path.join(this.secretsDir, keyName);
     const publicKeyPath = `${privateKeyPath}.pub`;
 
     await fs.ensureDir(this.secretsDir);
 
+    // Use existing key if available
     if (await fs.pathExists(privateKeyPath)) {
-      logger.debug('SSH key already exists, using existing key');
+      logger.debug('Host SSH key already exists, using existing key');
       const publicKey = await fs.readFile(publicKeyPath, 'utf8');
 
       // Also create authorized_keys file from the public key
@@ -47,7 +54,8 @@ export class SSHService {
       return { publicKey, privateKey: privateKeyPath };
     }
 
-    logger.info('Generating SSH key pair...');
+    // Generate new key pair
+    logger.info('Generating SSH key pair on local machine...');
     const { stderr } = await execAsync(`ssh-keygen -t rsa -b 4096 -f "${privateKeyPath}" -N "" -C "${CONSTANTS.DOCKER.CONTAINER_NAME}"`);
 
     if (stderr && !stderr.includes('Generating public/private')) {
@@ -62,84 +70,119 @@ export class SSHService {
     const authorizedKeysPath = path.join(this.secretsDir, 'authorized_keys');
     await fs.writeFile(authorizedKeysPath, publicKey);
 
-    logger.success('SSH key generated successfully');
+    logger.success('Host SSH key generated successfully');
 
     return { publicKey, privateKey: privateKeyPath };
   }
 
-  public async removeKnownHost(host: string, port: number): Promise<void> {
-    try {
-      const hostPattern = port === 22 ? host : `[${host}]:${port}`;
-      logger.debug(`Removing known host: ${hostPattern}`);
-
-      const { stderr } = await execAsync(`ssh-keygen -R "${hostPattern}"`);
-
-      if (stderr && !stderr.includes('not found in')) {
-        logger.debug(`Known host removal notice: ${stderr}`);
-      }
-    } catch {
-      logger.debug('No existing known host to remove');
-    }
-  }
-
-  public async addKnownHost(host: string, port: number): Promise<void> {
-    try {
-      const hostPattern = port === 22 ? host : `[${host}]:${port}`;
-      logger.debug(`Adding known host: ${hostPattern}`);
-
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      const { stdout, stderr } = await execAsync(`ssh-keyscan -p ${port} -H ${host} 2>/dev/null`);
-
-      if (stderr) {
-        logger.debug(`SSH keyscan notice: ${stderr}`);
-      }
-
-      if (stdout) {
-        await fs.ensureFile(this.knownHostsPath);
-        await fs.appendFile(this.knownHostsPath, stdout);
-        logger.debug('Known host added successfully');
-      }
-    } catch {
-      logger.warn('Could not add known host automatically');
-      logger.info('You may need to accept the host key on first connection');
-    }
-  }
-
-  public async manageKnownHosts(action: 'add' | 'remove', host?: string, port?: number): Promise<void> {
+  /**
+   * Remove container SSH key from host known_hosts
+   */
+  public async removeContainerSSHKeyFromHostKnownHosts(host = 'localhost', port?: number): Promise<void> {
     const sshConfig = this.config.getSshConfig();
-    const targetHost = host || 'localhost';
+    const targetPort = port || sshConfig.port;
+    const hostPattern = targetPort === 22 ? host : `[${host}]:${targetPort}`;
+
+    try {
+      // Use ssh-keygen to remove the entry
+      await execAsync(`ssh-keygen -R "${hostPattern}" 2>&1`);
+      logger.debug("Removed container's SSH key from host's known_hosts");
+    } catch {
+      // It's okay if the entry doesn't exist
+      logger.debug("No existing container SSH key to remove from host's known_hosts");
+    }
+  }
+
+  /**
+   * Add container SSH key to host known_hosts
+   */
+  public async addContainerSSHKeyToHostKnownHosts(host = 'localhost', port?: number): Promise<boolean> {
+    const sshConfig = this.config.getSshConfig();
     const targetPort = port || sshConfig.port;
 
-    await (action === 'remove' ? this.removeKnownHost(targetHost, targetPort) : this.addKnownHost(targetHost, targetPort));
+    try {
+      // Wait a bit for SSH service to be ready
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Scan for the container's SSH key
+      const { stdout } = await execAsync(`ssh-keyscan -p ${targetPort} -H ${host} 2>/dev/null`);
+
+      if (!stdout) {
+        logger.warn("Could not retrieve container's SSH key");
+        return false;
+      }
+
+      console.log(`\nContainer's SSH key found for [${host}]:${targetPort}`);
+      const shouldAdd = await prompt.confirm(`Add to host's ${this.knownHostsPath}?`, true);
+
+      if (!shouldAdd) {
+        logger.info("Container's SSH key not added. You will need to accept it manually on first connection.");
+        return false;
+      }
+
+      // Add to host's known_hosts
+      await fs.ensureFile(this.knownHostsPath);
+      await fs.appendFile(this.knownHostsPath, stdout);
+      logger.success("Container's SSH key added to host's known_hosts");
+
+      return true;
+    } catch (error) {
+      logger.error("Failed to add container's SSH key:", error as Record<string, unknown>);
+      return false;
+    }
   }
 
-  public async cleanupSSHKeys(): Promise<void> {
-    const keyName = 'container_rsa';
-    const privateKeyPath = path.join(this.secretsDir, keyName);
-    const publicKeyPath = `${privateKeyPath}.pub`;
+  /**
+   * Update container SSH key for rebuild
+   */
+  public async updateContainerKeyForRebuild(host = 'localhost', port?: number): Promise<void> {
+    const sshConfig = this.config.getSshConfig();
+    const targetPort = port || sshConfig.port;
+
+    console.log(chalk.yellow('\n⚠️  Container rebuild will generate new SSH keys'));
+    console.log(chalk.gray(`This affects [${host}]:${targetPort} in host's known_hosts: ${this.knownHostsPath}`));
+
+    // Remove old container SSH key from host known_hosts
+    await this.removeContainerSSHKeyFromHostKnownHosts(host, targetPort);
+
+    console.log("Old container's SSH key removed from host's known_hosts. New key will be added after rebuild.");
+  }
+
+  /**
+   * Copy host's public SSH key to container
+   */
+  public async copyPublicSSHKeyToContainer(containerName: string): Promise<void> {
+    await this.generateHostSSHKey(); // This creates the authorized_keys file in secrets dir
+
     const authorizedKeysPath = path.join(this.secretsDir, 'authorized_keys');
 
+    // Copy authorized_keys file to container
+    await execAsync(`docker cp "${authorizedKeysPath}" ${containerName}:/home/devvy/.ssh/authorized_keys`);
+
+    // Set proper ownership and permissions
+    await execAsync(`docker exec ${containerName} chown devvy:devvy /home/devvy/.ssh/authorized_keys`);
+    await execAsync(`docker exec ${containerName} chmod 600 /home/devvy/.ssh/authorized_keys`);
+
+    logger.debug("Host SSH public key copied to container's authorized_keys");
+  }
+
+  /**
+   * Clean up host's SSH keys
+   */
+  public async cleanupHostSSHKeys(): Promise<void> {
     try {
-      if (await fs.pathExists(privateKeyPath)) {
-        await fs.remove(privateKeyPath);
-        logger.debug('Removed private SSH key');
-      }
-
-      if (await fs.pathExists(publicKeyPath)) {
-        await fs.remove(publicKeyPath);
-        logger.debug('Removed public SSH key');
-      }
-
-      if (await fs.pathExists(authorizedKeysPath)) {
-        await fs.remove(authorizedKeysPath);
-        logger.debug('Removed authorized_keys file');
+      if (await fs.pathExists(this.secretsDir)) {
+        await fs.remove(this.secretsDir);
+        logger.debug('Removed host SSH keys from local machine');
       }
     } catch (error) {
       logger.debug('Error cleaning up SSH keys:', error as Record<string, unknown>);
     }
   }
 
+  /**
+   * Get SSH configuration for connecting to container
+   */
   public getSSHConfig(): {
     user: string;
     host: string;
@@ -147,8 +190,7 @@ export class SSHService {
     keyPath: string;
   } {
     const sshConfig = this.config.getSshConfig();
-    const keyName = 'container_rsa';
-    const keyPath = path.join(this.secretsDir, keyName);
+    const keyPath = path.join(this.secretsDir, CONSTANTS.SSH.KEY_NAME);
 
     return {
       user: sshConfig.user,
@@ -158,6 +200,9 @@ export class SSHService {
     };
   }
 
+  /**
+   * Test SSH connection to container
+   */
   public async testSSHConnection(): Promise<boolean> {
     try {
       const config = this.getSSHConfig();
@@ -168,27 +213,6 @@ export class SSHService {
       return !stderr || stderr.length === 0;
     } catch {
       return false;
-    }
-  }
-
-  public async copySSHKeyToContainer(containerName: string): Promise<void> {
-    const { publicKey } = await this.generateSSHKey();
-
-    const authorizedKeysContent = publicKey.trim();
-    const tempFile = `/tmp/devvy_authorized_keys_${Date.now()}`;
-
-    await fs.writeFile(tempFile, authorizedKeysContent);
-
-    try {
-      await execAsync(`docker cp "${tempFile}" ${containerName}:/home/devvy/.ssh/authorized_keys`);
-
-      await execAsync(`docker exec ${containerName} chown devvy:devvy /home/devvy/.ssh/authorized_keys`);
-
-      await execAsync(`docker exec ${containerName} chmod 600 /home/devvy/.ssh/authorized_keys`);
-
-      logger.debug('SSH key copied to container');
-    } finally {
-      await fs.remove(tempFile);
     }
   }
 }

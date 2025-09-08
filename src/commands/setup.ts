@@ -94,12 +94,12 @@ async function createDirectories(projectRoot: string): Promise<void> {
 async function generateSSHKeys(_projectRoot: string): Promise<void> {
   const sshService = SSHService.getInstance();
 
-  const spinner = new Spinner('Setting up SSH keys...');
+  const spinner = new Spinner('Setting up host SSH keys...');
   spinner.start();
 
   try {
-    await sshService.generateSSHKey();
-    spinner.succeed('SSH keys configured');
+    await sshService.generateHostSSHKey();
+    spinner.succeed('Host SSH keys configured');
   } catch (error) {
     spinner.fail('Failed to generate SSH keys');
     throw error;

@@ -110,7 +110,7 @@ export async function cleanupCommand(options: CleanupOptions): Promise<void> {
         const spinner = new Spinner('Removing SSH keys and secrets...');
         spinner.start();
 
-        await sshService.cleanupSSHKeys();
+        await sshService.cleanupHostSSHKeys();
 
         const secretsDir = path.join(process.cwd(), 'secrets');
         if (await fs.pathExists(secretsDir)) {
@@ -204,10 +204,10 @@ async function performFullCleanup(): Promise<void> {
   try {
     await run('docker compose down -v 2>/dev/null || true');
     await run('docker rm -f claude-devvy-container 2>/dev/null || true');
-    await run('docker rmi claude-devvy-container_claude-devvy-container 2>/dev/null || true');
+    await run('docker rmi claude-devvy-container_devcontainer 2>/dev/null || true');
 
     const sshService = SSHService.getInstance();
-    await sshService.cleanupSSHKeys();
+    await sshService.cleanupHostSSHKeys();
 
     const dirsToRemove = ['secrets'];
     for (const dir of dirsToRemove) {
