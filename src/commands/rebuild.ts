@@ -85,20 +85,20 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
 
     startSpinner.succeed('Container started');
 
-    // Step 6: Wait for SSH to be ready
-    const sshReadySpinner = new Spinner('Waiting for SSH service...');
-    sshReadySpinner.start();
+    // Step 6: Wait for container to be ready
+    const containerReadySpinner = new Spinner('Waiting for container to be ready...');
+    containerReadySpinner.start();
 
-    let sshReady = false;
+    let containerReady = false;
     let attempts = 0;
     const maxAttempts = 30;
 
-    while (!sshReady && attempts < maxAttempts) {
+    while (!containerReady && attempts < maxAttempts) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       try {
         const result = await docker.exec(containerName, ['true']);
         if (result.success) {
-          sshReady = true;
+          containerReady = true;
         }
       } catch {
         // Container not ready yet
@@ -106,12 +106,12 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
       attempts++;
     }
 
-    if (!sshReady) {
-      sshReadySpinner.fail('SSH service did not start in time');
+    if (!containerReady) {
+      containerReadySpinner.fail('Container did not become ready in time');
       process.exit(1);
     }
 
-    sshReadySpinner.succeed('SSH service ready');
+    containerReadySpinner.succeed('Container is ready');
 
     // Step 7: Add new SSH host key to known hosts
     const keySpinner = new Spinner('Adding new SSH host key...');
