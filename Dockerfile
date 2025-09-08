@@ -44,9 +44,14 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-# Create devvy user with a temporary UID (will be modified at runtime)
-# Using 2000 as it's unlikely to conflict with system users
-RUN useradd -u 2000 -m -s /bin/zsh devvy
+# Build arguments for UID/GID matching
+ARG HOST_UID=1000
+ARG HOST_GID=1000
+
+# Create devvy user with host-matching UID/GID
+# If the GID already exists, use that group; otherwise create a new one
+RUN (getent group ${HOST_GID} || groupadd -g ${HOST_GID} devvy) && \
+    useradd -u ${HOST_UID} -g ${HOST_GID} -m -s /bin/zsh devvy
 
 # Configure SSH for remote access (for mosh/ssh from host)
 RUN mkdir /var/run/sshd && \
@@ -89,7 +94,7 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
     sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc
 
 # Create directory structure
-RUN mkdir -p ~/claudespace/worktrees ~/.ssh ~/.config ~/.claude && \
+RUN mkdir -p ~/.ssh ~/.config ~/.claude && \
     chmod 700 ~/.ssh
 
 # Setup SSH for GitHub (will be populated by entrypoint)
@@ -97,9 +102,7 @@ RUN touch ~/.ssh/known_hosts && \
     ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
 
 # Environment variables
-ENV CLAUDESPACE_PATH=/home/devvy/claudespace
-ENV WORKTREES_PATH=/home/devvy/claudespace/worktrees
-ENV DEVCONTAINER=true
+# PROJECTS_PATH will be set dynamically from the host's .env file
 
 # Switch back to root for runtime setup
 USER root

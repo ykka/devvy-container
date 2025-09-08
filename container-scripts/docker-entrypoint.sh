@@ -1,31 +1,12 @@
 #!/bin/bash
 set -e
 
-# Runtime UID/GID matching for proper file permissions
-# These should be passed from docker-compose.yml
-HOST_UID=${HOST_UID:-2000}
-HOST_GID=${HOST_GID:-2000}
+# Get the devvy user's group name for use later
+DEVVY_GROUP=$(id -gn devvy)
 
-# Modify devvy user to match host UID/GID
-if [ "$HOST_UID" != "2000" ] || [ "$HOST_GID" != "2000" ]; then
-    echo "Adjusting devvy user to match host UID:$HOST_UID GID:$HOST_GID..."
-    
-    # Create group if it doesn't exist
-    if ! getent group $HOST_GID > /dev/null 2>&1; then
-        groupadd -g $HOST_GID devvy_group
-    fi
-    
-    # Get the group name for the GID
-    DEVVY_GROUP=$(getent group $HOST_GID | cut -d: -f1)
-    
-    # Modify user and group
-    usermod -u $HOST_UID -g $HOST_GID devvy
-    
-    # Fix home directory ownership
-    chown -R $HOST_UID:$HOST_GID /home/devvy
-else
-    DEVVY_GROUP=$(id -gn devvy)
-fi
+# Set the PROJECTS_PATH environment variable
+# The /home/devvy/repos directory is mounted from the host's ${PROJECTS_PATH}
+export PROJECTS_PATH=/home/devvy/repos
 
 # Initialize firewall if running with network admin capabilities
 if capsh --print | grep -q cap_net_admin; then
@@ -33,19 +14,7 @@ if capsh --print | grep -q cap_net_admin; then
     /usr/local/bin/init-firewall.sh
 fi
 
-# Setup container SSH key if provided
-if [ -f /home/devvy/.ssh/container_rsa ]; then
-    # Only try to change ownership if not read-only
-    if touch /home/devvy/.ssh/container_rsa 2>/dev/null; then
-        chown devvy:${DEVVY_GROUP} /home/devvy/.ssh/container_rsa
-        chmod 600 /home/devvy/.ssh/container_rsa
-    fi
-
-    # Add to ssh-agent (run as devvy user)
-    su - devvy -c 'eval $(ssh-agent -s) && ssh-add ~/.ssh/container_rsa'
-fi
-
-# Setup SSH authorized_keys for host access
+# Setup SSH authorized_keys for access from local machine
 if [ -f /secrets/authorized_keys ]; then
     cp /secrets/authorized_keys /home/devvy/.ssh/authorized_keys
     chown devvy:${DEVVY_GROUP} /home/devvy/.ssh/authorized_keys
@@ -57,13 +26,17 @@ if [ -n "$GITHUB_TOKEN" ]; then
     echo "$GITHUB_TOKEN" | su - devvy -c 'gh auth login --with-token'
 fi
 
-# Configure Git with provided user info
-if [ -n "$GIT_USER_NAME" ] && [ "$GIT_USER_NAME" != "Your Name" ]; then
-    su - devvy -c "git config --global user.name \"$GIT_USER_NAME\""
-fi
+# Configure Git with provided user info - skip if .gitconfig is read-only
+if [ -w "/home/devvy/.gitconfig" ] || [ ! -e "/home/devvy/.gitconfig" ]; then
+    if [ -n "$GIT_USER_NAME" ] && [ "$GIT_USER_NAME" != "Your Name" ]; then
+        su - devvy -c "git config --global user.name \"$GIT_USER_NAME\"" || echo "Warning: Could not set git user.name"
+    fi
 
-if [ -n "$GIT_USER_EMAIL" ] && [ "$GIT_USER_EMAIL" != "your.email@example.com" ]; then
-    su - devvy -c "git config --global user.email \"$GIT_USER_EMAIL\""
+    if [ -n "$GIT_USER_EMAIL" ] && [ "$GIT_USER_EMAIL" != "your.email@example.com" ]; then
+        su - devvy -c "git config --global user.email \"$GIT_USER_EMAIL\"" || echo "Warning: Could not set git user.email"
+    fi
+else
+    echo "Git config is read-only, skipping git configuration"
 fi
 
 # Install LazyVim if requested
@@ -122,23 +95,38 @@ EOF
     chmod +x /home/devvy/.vscode-server-install-extensions.sh
     
     # Add to zshrc so it runs on each login (will check if already installed)
-    if ! grep -q "vscode-server-install-extensions" /home/devvy/.zshrc 2>/dev/null; then
-        echo '# Auto-install VS Code/Cursor extensions' >> /home/devvy/.zshrc
-        echo '[ -f ~/.vscode-server-install-extensions.sh ] && ~/.vscode-server-install-extensions.sh &' >> /home/devvy/.zshrc
+    # Skip if .zshrc is read-only
+    if [ -w "/home/devvy/.zshrc" ]; then
+        if ! grep -q "vscode-server-install-extensions" /home/devvy/.zshrc 2>/dev/null; then
+            echo '# Auto-install VS Code/Cursor extensions' >> /home/devvy/.zshrc
+            echo '[ -f ~/.vscode-server-install-extensions.sh ] && ~/.vscode-server-install-extensions.sh &' >> /home/devvy/.zshrc
+        fi
+    else
+        echo "Note: .zshrc is read-only, VS Code extensions will need manual installation"
     fi
     
     echo "VS Code Server extension installer prepared"
 fi
 
-# Fix permissions on mounted directories
-chown -R devvy:${DEVVY_GROUP} /home/devvy/repos 2>/dev/null || true
+# Skip permission changes on mounted directories - they inherit from host
 
 # Start SSH daemon
 if [ "$1" = "/usr/sbin/sshd" ]; then
+    echo "Starting SSH daemon..."
+    # Generate host keys if they don't exist
+    if [ ! -f /etc/ssh/ssh_host_ed25519_key ]; then
+        ssh-keygen -t ed25519 -f /etc/ssh/ssh_host_ed25519_key -N ""
+    fi
+    if [ ! -f /etc/ssh/ssh_host_rsa_key ]; then
+        ssh-keygen -t rsa -b 4096 -f /etc/ssh/ssh_host_rsa_key -N ""
+    fi
+    
     echo "Container ready! SSH available on port 22"
     echo "Host key fingerprint:"
     ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
-    exec "$@"
+    
+    # Start sshd in foreground
+    exec /usr/sbin/sshd -D
 else
     exec "$@"
 fi
