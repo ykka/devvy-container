@@ -26,7 +26,7 @@ export async function connectCommand(options: ConnectOptions): Promise<void> {
     }
 
     const sshConfig = config.getSshConfig();
-    const sshKeyPath = sshConfig.keyPath || path.join(process.cwd(), CONSTANTS.PATHS.SECRETS_DIR, CONSTANTS.SSH.KEY_NAME);
+    const sshKeyPath = sshConfig.keyPath || path.join(process.cwd(), CONSTANTS.HOST_PATHS.SECRETS_DIR, CONSTANTS.SSH.KEY_NAME);
 
     if (!(await fs.pathExists(sshKeyPath))) {
       logger.error(`SSH key not found at: ${sshKeyPath}`);
@@ -49,26 +49,14 @@ export async function connectCommand(options: ConnectOptions): Promise<void> {
 
     if (options.mosh) {
       command = 'mosh';
-      args = ['--ssh', `ssh -p ${sshConfig.port} -i ${sshKeyPath} -o StrictHostKeyChecking=no`, `${sshConfig.user}@localhost`];
+      args = ['--ssh', `ssh -p ${sshConfig.port} -i ${sshKeyPath}`, `${sshConfig.user}@localhost`];
 
       if (options.tmux) {
         args.push('--', 'tmux', 'new-session', '-A', '-s', 'main');
       }
     } else {
       command = 'ssh';
-      args = [
-        '-p',
-        String(sshConfig.port),
-        '-i',
-        sshKeyPath,
-        '-o',
-        'StrictHostKeyChecking=no',
-        '-o',
-        'UserKnownHostsFile=/dev/null',
-        '-o',
-        'LogLevel=ERROR',
-        `${sshConfig.user}@localhost`,
-      ];
+      args = ['-p', String(sshConfig.port), '-i', sshKeyPath, `${sshConfig.user}@localhost`];
 
       if (options.tmux) {
         args.push('-t', 'tmux new-session -A -s main');

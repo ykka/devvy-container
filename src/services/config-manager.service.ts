@@ -36,7 +36,7 @@ export class ConfigManager {
   private constructor() {
     const projectRoot = process.cwd();
     this.configPath = path.join(projectRoot, 'devvy.config.json');
-    this.envPath = path.join(projectRoot, CONSTANTS.PATHS.ENV_FILE);
+    this.envPath = path.join(projectRoot, CONSTANTS.HOST_PATHS.ENV_FILE);
   }
 
   static getInstance(): ConfigManager {

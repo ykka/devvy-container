@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CONSTANTS } from './constants';
 
 export const envSchema = z.object({
   // User Configuration for runtime UID/GID matching
@@ -46,29 +47,39 @@ export const dockerComposeSchema = z.object({
 });
 
 export const configSchema = z.object({
-  docker: z.object({
-    composeFile: z.string().default('docker-compose.yml'),
-    projectName: z.string().default('claude-devvy-container'),
-    containerName: z.string().default('claude-devvy-container'),
-  }),
-  ssh: z.object({
-    port: z.number().default(2222),
-    keyPath: z.string().optional(),
-    user: z.string().default('developer'),
-  }),
-  workspace: z.object({
-    hostPath: z.string().optional(),
-    containerPath: z.string().default('/home/developer/projects'),
-  }),
-  vscode: z.object({
-    settingsPath: z.string().optional(),
-    extensionsPath: z.string().optional(),
-    syncEnabled: z.boolean().default(true),
-  }),
-  logging: z.object({
-    level: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
-    file: z.string().optional(),
-  }),
+  docker: z
+    .object({
+      composeFile: z.string().default(CONSTANTS.DOCKER.COMPOSE_FILE),
+      projectName: z.string().default(CONSTANTS.DOCKER.PROJECT_NAME),
+      containerName: z.string().default(CONSTANTS.DOCKER.CONTAINER_NAME),
+    })
+    .default({}),
+  ssh: z
+    .object({
+      port: z.number().default(CONSTANTS.SSH.PORT),
+      keyPath: z.string().optional(),
+      user: z.string().default(CONSTANTS.CONTAINER_USER.NAME),
+    })
+    .default({}),
+  workspace: z
+    .object({
+      hostPath: z.string().optional(),
+      mountPath: z.string().default(CONSTANTS.CONTAINER_USER.REPOS_PATH),
+    })
+    .default({}),
+  vscode: z
+    .object({
+      settingsPath: z.string().optional(),
+      extensionsPath: z.string().optional(),
+      syncEnabled: z.boolean().default(CONSTANTS.VSCODE.SYNC_ENABLED),
+    })
+    .default({}),
+  logging: z
+    .object({
+      level: z.enum(['error', 'warn', 'info', 'debug']).default(CONSTANTS.LOGGING.LEVEL as 'info'),
+      file: z.string().optional(),
+    })
+    .default({}),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

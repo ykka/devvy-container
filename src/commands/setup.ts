@@ -77,14 +77,14 @@ async function createDirectories(projectRoot: string): Promise<void> {
   const spinner = new Spinner('Creating project directories...');
   spinner.start();
 
-  const directories = [CONSTANTS.PATHS.SECRETS_DIR, CONSTANTS.PATHS.VSCODE_CONFIG_DIR, 'setup-scripts', 'container-scripts'];
+  const directories = [CONSTANTS.HOST_PATHS.SECRETS_DIR, CONSTANTS.HOST_PATHS.VSCODE_CONFIG_DIR, 'setup-scripts', 'container-scripts'];
 
   for (const dir of directories) {
     const dirPath = path.join(projectRoot, dir);
     await fs.ensureDir(dirPath);
   }
 
-  const gitignorePath = path.join(projectRoot, CONSTANTS.PATHS.SECRETS_DIR, '.gitignore');
+  const gitignorePath = path.join(projectRoot, CONSTANTS.HOST_PATHS.SECRETS_DIR, '.gitignore');
   if (!(await fs.pathExists(gitignorePath))) {
     await fs.writeFile(gitignorePath, '*\n!.gitignore\n');
   }
@@ -120,7 +120,7 @@ async function setupVSCodeSync(projectRoot: string): Promise<void> {
   const editorName = editorType === 'cursor' ? 'Cursor' : 'VS Code';
 
   // Check if settings already exist
-  const vscodeConfigDir = path.join(projectRoot, CONSTANTS.PATHS.VSCODE_CONFIG_DIR);
+  const vscodeConfigDir = path.join(projectRoot, CONSTANTS.HOST_PATHS.VSCODE_CONFIG_DIR);
   const settingsExist = await fs.pathExists(path.join(vscodeConfigDir, 'settings.json'));
 
   if (settingsExist) {

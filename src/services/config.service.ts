@@ -1,7 +1,6 @@
 import * as path from 'node:path';
 
 import { CONSTANTS } from '@config/constants';
-import { DEFAULT_CONFIG } from '@config/defaults';
 import { type AppConfig, configSchema, type EnvConfig, envSchema } from '@config/schema';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs-extra';
@@ -13,7 +12,7 @@ export class ConfigService {
   private envConfig: EnvConfig;
 
   private constructor() {
-    this.config = DEFAULT_CONFIG;
+    this.config = configSchema.parse({});
     this.envConfig = this.loadEnvConfig();
     this.loadConfig();
   }
@@ -26,7 +25,7 @@ export class ConfigService {
   }
 
   private loadEnvConfig(): EnvConfig {
-    dotenv.config({ path: CONSTANTS.PATHS.ENV_FILE });
+    dotenv.config({ path: CONSTANTS.HOST_PATHS.ENV_FILE });
 
     try {
       return envSchema.parse(process.env);
@@ -45,7 +44,7 @@ export class ConfigService {
       try {
         const userConfig = fs.readJsonSync(configPath) as unknown;
         const validatedConfig = configSchema.parse(userConfig);
-        this.config = { ...DEFAULT_CONFIG, ...validatedConfig };
+        this.config = validatedConfig;
       } catch (error) {
         if (error instanceof z.ZodError) {
           console.error('Invalid configuration file:', error.errors);

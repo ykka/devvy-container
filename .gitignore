@@ -8,7 +8,7 @@ secrets/
 devvy.config.json
 
 # ENV file (generated)
-env
+.env
 
 # Logs and typical things
 *.log

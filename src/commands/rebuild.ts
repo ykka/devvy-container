@@ -56,22 +56,15 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
     }
 
     // Step 4: Build new image
-    const buildSpinner = new Spinner('Building new container image...');
-    buildSpinner.start();
+    logger.info('\n📦 Building new container image...\n');
 
-    const buildArgs = ['build'];
-    if (options.noCache) {
-      buildArgs.push('--no-cache');
-    }
-
-    const buildResult = await compose.run(buildArgs);
-    if (!buildResult.success) {
-      buildSpinner.fail('Failed to build container image');
-      logger.error(buildResult.stderr);
+    const buildSuccess = await compose.build({ noCache: options.noCache });
+    if (!buildSuccess) {
+      logger.error('Failed to build container image');
       process.exit(1);
     }
 
-    buildSpinner.succeed('Container image rebuilt successfully');
+    logger.success('✨ Container image rebuilt successfully');
 
     // Step 5: Start new container
     const startSpinner = new Spinner('Starting new container...');

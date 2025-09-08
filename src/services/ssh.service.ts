@@ -1,6 +1,7 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import { CONSTANTS } from '@config/constants';
 import { ConfigService } from '@services/config.service';
 import { logger } from '@utils/logger';
 import { execAsync } from '@utils/shell';
@@ -47,7 +48,7 @@ export class SSHService {
     }
 
     logger.info('Generating SSH key pair...');
-    const { stderr } = await execAsync(`ssh-keygen -t ed25519 -f "${privateKeyPath}" -N "" -C "claude-docker"`);
+    const { stderr } = await execAsync(`ssh-keygen -t rsa -b 4096 -f "${privateKeyPath}" -N "" -C "${CONSTANTS.DOCKER.CONTAINER_NAME}"`);
 
     if (stderr && !stderr.includes('Generating public/private')) {
       throw new Error(`Failed to generate SSH key: ${stderr}`);
@@ -179,11 +180,11 @@ export class SSHService {
     await fs.writeFile(tempFile, authorizedKeysContent);
 
     try {
-      await execAsync(`docker cp "${tempFile}" ${containerName}:/home/claude/.ssh/authorized_keys`);
+      await execAsync(`docker cp "${tempFile}" ${containerName}:/home/devvy/.ssh/authorized_keys`);
 
-      await execAsync(`docker exec ${containerName} chown claude:claude /home/claude/.ssh/authorized_keys`);
+      await execAsync(`docker exec ${containerName} chown devvy:devvy /home/devvy/.ssh/authorized_keys`);
 
-      await execAsync(`docker exec ${containerName} chmod 600 /home/claude/.ssh/authorized_keys`);
+      await execAsync(`docker exec ${containerName} chmod 600 /home/devvy/.ssh/authorized_keys`);
 
       logger.debug('SSH key copied to container');
     } finally {

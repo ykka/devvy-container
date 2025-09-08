@@ -57,13 +57,77 @@ if [ -n "$GITHUB_TOKEN" ]; then
     echo "$GITHUB_TOKEN" | su - devvy -c 'gh auth login --with-token'
 fi
 
-# Git config is mounted from host system as read-only, no need to configure
+# Configure Git with provided user info
+if [ -n "$GIT_USER_NAME" ] && [ "$GIT_USER_NAME" != "Your Name" ]; then
+    su - devvy -c "git config --global user.name \"$GIT_USER_NAME\""
+fi
+
+if [ -n "$GIT_USER_EMAIL" ] && [ "$GIT_USER_EMAIL" != "your.email@example.com" ]; then
+    su - devvy -c "git config --global user.email \"$GIT_USER_EMAIL\""
+fi
 
 # Install LazyVim if requested
 if [ "$INSTALL_LAZYVIM" = "true" ] && [ ! -d "/home/devvy/.config/nvim_local" ]; then
     echo "Installing LazyVim..."
     su - devvy -c 'git clone https://github.com/LazyVim/starter /home/devvy/.config/nvim_local'
     su - devvy -c 'rm -rf /home/devvy/.config/nvim_local/.git'
+fi
+
+# Install VS Code/Cursor extensions from extensions.txt
+if [ -f "/home/devvy/vscode-config/extensions.txt" ]; then
+    echo "Preparing VS Code Server extension list..."
+    
+    # Create directories for VS Code Server and Cursor Server
+    su - devvy -c 'mkdir -p ~/.vscode-server ~/.cursor-server'
+    
+    # Create a script that will install extensions when VS Code Server is available
+    cat > /home/devvy/.vscode-server-install-extensions.sh << 'EOF'
+#!/bin/bash
+# This script installs extensions when VS Code Server CLI is available
+
+EXTENSIONS_FILE="/home/devvy/vscode-config/extensions.txt"
+INSTALLED_MARKER="/home/devvy/.vscode-server/.extensions-installed"
+
+# Check if already installed
+if [ -f "$INSTALLED_MARKER" ]; then
+    exit 0
+fi
+
+# Find VS Code Server CLI
+VSCODE_CLI=$(find ~/.vscode-server/cli -name "code" -type f 2>/dev/null | head -1)
+CURSOR_CLI=$(find ~/.cursor-server/cli -name "cursor" -type f 2>/dev/null | head -1)
+
+if [ -n "$VSCODE_CLI" ] && [ -f "$EXTENSIONS_FILE" ]; then
+    echo "Installing VS Code Server extensions..."
+    while IFS= read -r extension || [ -n "$extension" ]; do
+        if [ -n "$extension" ] && [[ ! "$extension" =~ ^# ]]; then
+            echo "  Installing: $extension"
+            "$VSCODE_CLI" --install-extension "$extension" --force 2>/dev/null || echo "    Warning: Could not install $extension"
+        fi
+    done < "$EXTENSIONS_FILE"
+    touch "$INSTALLED_MARKER"
+elif [ -n "$CURSOR_CLI" ] && [ -f "$EXTENSIONS_FILE" ]; then
+    echo "Installing Cursor Server extensions..."
+    while IFS= read -r extension || [ -n "$extension" ]; do
+        if [ -n "$extension" ] && [[ ! "$extension" =~ ^# ]]; then
+            echo "  Installing: $extension"
+            "$CURSOR_CLI" --install-extension "$extension" --force 2>/dev/null || echo "    Warning: Could not install $extension"
+        fi
+    done < "$EXTENSIONS_FILE"
+    touch "$INSTALLED_MARKER"
+fi
+EOF
+    
+    chown devvy:${DEVVY_GROUP} /home/devvy/.vscode-server-install-extensions.sh
+    chmod +x /home/devvy/.vscode-server-install-extensions.sh
+    
+    # Add to zshrc so it runs on each login (will check if already installed)
+    if ! grep -q "vscode-server-install-extensions" /home/devvy/.zshrc 2>/dev/null; then
+        echo '# Auto-install VS Code/Cursor extensions' >> /home/devvy/.zshrc
+        echo '[ -f ~/.vscode-server-install-extensions.sh ] && ~/.vscode-server-install-extensions.sh &' >> /home/devvy/.zshrc
+    fi
+    
+    echo "VS Code Server extension installer prepared"
 fi
 
 # Fix permissions on mounted directories

@@ -1,7 +1,7 @@
 import { ComposeService } from '@services/compose.service';
-import { ConfigService } from '@services/config.service';
 import { DockerService } from '@services/docker.service';
 import { SSHService } from '@services/ssh.service';
+import { UnifiedConfigService } from '@services/unified-config.service';
 import { logger } from '@utils/logger';
 import { Spinner } from '@utils/spinner';
 import chalk from 'chalk';
@@ -14,12 +14,23 @@ export interface StartOptions {
 export async function startCommand(options: StartOptions): Promise<void> {
   const dockerService = DockerService.getInstance();
   const composeService = ComposeService.getInstance();
-  const config = ConfigService.getInstance();
+  const config = UnifiedConfigService.getInstance();
   const sshService = SSHService.getInstance();
 
   try {
+    // Validate environment before starting
+    const validation = await config.validateEnvironment();
+    if (!validation.valid) {
+      logger.error('Environment validation failed:');
+      for (const error of validation.errors) {
+        logger.error(`  - ${error}`);
+      }
+      process.exit(1);
+    }
+
     const spinner = Spinner.createProgressSpinner([
       'Checking Docker daemon...',
+      'Validating configuration...',
       'Checking container status...',
       'Managing SSH keys...',
       options.build ? 'Building Docker image...' : 'Starting container...',
@@ -33,6 +44,9 @@ export async function startCommand(options: StartOptions): Promise<void> {
       spinner.fail('Docker daemon is not running. Please start Docker first.');
       process.exit(1);
     }
+    spinner.next();
+
+    // Validation step
     spinner.next();
 
     const containerName = config.getDockerConfig().containerName;

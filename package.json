@@ -7,7 +7,7 @@
     "devvy": "./devvy"
   },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx src/index.ts",
     "dev:debug": "NODE_ENV=development tsx --inspect src/index.ts",
     "build": "npm run clean && tsc && tsc-alias",
     "build:watch": "tsc --watch",

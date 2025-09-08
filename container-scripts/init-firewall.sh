@@ -40,25 +40,39 @@ done
 
 # Allow specific documentation and development domains
 echo "Adding selected documentation and dev domains to allowed-domains ipset..."
-for domain in \
-    docs.anthropic.com \
-    nextjs.org \
-    reactjs.org \
-    nodejs.org \
-    developer.mozilla.org \
-    stackoverflow.com \
-    github.com \
-    npmjs.com \
-    typescript-eslint.io \
-    eslint.org \
-    prettier.io \
-    vitejs.dev \
-    webpack.js.org \
-do
-    # Resolve all A and AAAA records for the domain and add to ipset
-    for ip in $(dig +short A $domain) $(dig +short AAAA $domain); do
-        [ -n "$ip" ] && ipset add allowed-domains "$ip" 2>/dev/null || true
-    done
+
+# Use environment variable if provided, otherwise use defaults
+if [ -n "$FIREWALL_ALLOWED_DOMAINS" ]; then
+    IFS=',' read -ra DOMAINS <<< "$FIREWALL_ALLOWED_DOMAINS"
+else
+    # Default domains
+    DOMAINS=(
+        "docs.anthropic.com"
+        "nextjs.org"
+        "reactjs.org"
+        "nodejs.org"
+        "developer.mozilla.org"
+        "stackoverflow.com"
+        "github.com"
+        "npmjs.com"
+        "typescript-eslint.io"
+        "eslint.org"
+        "prettier.io"
+        "vitejs.dev"
+        "webpack.js.org"
+    )
+fi
+
+for domain in "${DOMAINS[@]}"; do
+    # Trim whitespace
+    domain=$(echo "$domain" | xargs)
+    if [ -n "$domain" ]; then
+        echo "  Adding domain: $domain"
+        # Resolve all A and AAAA records for the domain and add to ipset
+        for ip in $(dig +short A $domain) $(dig +short AAAA $domain); do
+            [ -n "$ip" ] && ipset add allowed-domains "$ip" 2>/dev/null || true
+        done
+    fi
 done
 
 # Allow connections to whitelisted IPs
