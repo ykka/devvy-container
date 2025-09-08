@@ -1,21 +1,21 @@
-// Re-export runtime config functions
-
-// Re-export default values
-export { getDefaultLazyvimPath, getDefaultProjectsPath, getDefaultTmuxPath } from './defaults';
-// Re-export path utilities
-export { getAbsolutePath, getConfigPath, getEnvPath, getProjectRoot } from './paths';
+// Re-export config management
 export {
   configExists,
   type DevvyConfig,
   devvyConfigSchema,
+  getConfig,
+  getProjectRoot,
+  loadConfig,
+  saveConfig,
+} from './config';
+// Re-export default values
+export { getDefaultLazyvimPath, getDefaultProjectsPath, getDefaultTmuxPath } from './defaults';
+// Re-export environment management
+export {
   type EnvConfig,
   envSchema,
-  expandPath,
   generateEnvFile,
-  getConfig,
   getEnvConfig,
-  loadConfig,
   loadEnvConfig,
-  saveConfig,
   validateEnvironment,
-} from './runtime';
+} from './environment';

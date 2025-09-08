@@ -1,4 +1,3 @@
-import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { CONSTANTS } from '@config/constants';
@@ -6,6 +5,7 @@ import * as config from '@config/index';
 import * as ssh from '@services/ssh';
 import * as vscode from '@services/vscode';
 import { logger } from '@utils/logger';
+import { expandPath } from '@utils/paths';
 import * as prompt from '@utils/prompt';
 import { commandExists, exec } from '@utils/shell';
 import { Spinner } from '@utils/spinner';
@@ -157,14 +157,6 @@ async function setupDevvyConfig(_projectRoot: string): Promise<void> {
   } else {
     logger.info('\nSetting up configuration...\n');
   }
-
-  // Expand home directory in paths
-  const expandPath = (p: string): string => {
-    if (p.startsWith('~')) {
-      return path.join(os.homedir(), p.slice(1));
-    }
-    return p;
-  };
 
   // Step 1: Projects Directory
   const defaultProjectsPath = config.getDefaultProjectsPath();
