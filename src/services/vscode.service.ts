@@ -130,56 +130,6 @@ export class VSCodeService {
     }
   }
 
-  public async exportSettings(editorType: EditorType): Promise<void> {
-    const config = this.getEditorPaths(editorType);
-
-    logger.info(`Exporting settings to ${config.name}...`);
-
-    // Ensure editor config directory exists
-    await fs.ensureDir(path.dirname(config.settingsPath));
-
-    // Export settings.json
-    const settingsPath = path.join(this.projectConfigDir, 'settings.json');
-    if (await fs.pathExists(settingsPath)) {
-      const settings = await fs.readJson(settingsPath);
-
-      // Merge with existing settings if they exist
-      let existingSettings = {};
-      if (await fs.pathExists(config.settingsPath)) {
-        existingSettings = await fs.readJson(config.settingsPath);
-      }
-
-      const mergedSettings = { ...existingSettings, ...settings };
-      await fs.writeJson(config.settingsPath, mergedSettings, { spaces: 2 });
-      logger.success('Settings exported');
-    } else {
-      logger.warn('No settings.json to export');
-    }
-
-    // Export keybindings.json
-    const keybindingsPath = path.join(this.projectConfigDir, 'keybindings.json');
-    if (await fs.pathExists(keybindingsPath)) {
-      const keybindings = await fs.readJson(keybindingsPath);
-
-      // For keybindings, we replace rather than merge
-      await fs.writeJson(config.keybindingsPath, keybindings, { spaces: 2 });
-      logger.success('Keybindings exported');
-    } else {
-      logger.warn('No keybindings.json to export');
-    }
-
-    // Export extensions
-    await this.installExtensions(editorType);
-
-    // Export snippets
-    const snippetsDir = path.join(this.projectConfigDir, 'snippets');
-    if (await fs.pathExists(snippetsDir)) {
-      await fs.ensureDir(config.snippetsPath);
-      await fs.copy(snippetsDir, config.snippetsPath, { overwrite: true });
-      logger.success('Snippets exported');
-    }
-  }
-
   public async importExtensions(editorType: EditorType): Promise<void> {
     const config = this.getEditorPaths(editorType);
 
@@ -194,80 +144,6 @@ export class VSCodeService {
     } catch (error) {
       logger.debug('Extension fetch error:', error as Record<string, unknown>);
     }
-  }
-
-  public async installExtensions(editorType: EditorType): Promise<void> {
-    const config = this.getEditorPaths(editorType);
-    const extensionsPath = path.join(this.projectConfigDir, 'extensions.txt');
-
-    if (!(await fs.pathExists(extensionsPath))) {
-      logger.warn('No extensions.txt file found');
-      return;
-    }
-
-    const extensionsContent = await fs.readFile(extensionsPath, 'utf8');
-    const extensions = extensionsContent.trim().split('\n').filter(Boolean);
-
-    if (extensions.length === 0) {
-      logger.info('No extensions to install');
-      return;
-    }
-
-    logger.info(`Installing ${extensions.length} extensions...`);
-
-    let installed = 0;
-    let failed = 0;
-
-    for (const extension of extensions) {
-      try {
-        logger.debug(`Installing ${extension}...`);
-        const { stderr } = await run(`${config.commandName} --install-extension ${extension}`, { silent: true });
-
-        if (stderr?.includes('already installed')) {
-          logger.debug(`${extension} already installed`);
-        } else {
-          installed++;
-        }
-      } catch {
-        logger.warn(`Failed to install ${extension}`);
-        failed++;
-      }
-    }
-
-    if (installed > 0) {
-      logger.success(`Installed ${installed} extensions`);
-    }
-    if (failed > 0) {
-      logger.warn(`Failed to install ${failed} extensions`);
-    }
-  }
-
-  public async getInstalledExtensions(editorType: EditorType): Promise<ExtensionInfo[]> {
-    const config = this.getEditorPaths(editorType);
-
-    try {
-      const { stdout } = await run(`${config.commandName} --list-extensions --show-versions`);
-
-      if (stdout) {
-        return stdout
-          .trim()
-          .split('\n')
-          .filter(Boolean)
-          .map((line: string) => {
-            const [id, version] = line.split('@');
-            return { id: id || line, version };
-          });
-      }
-    } catch (error) {
-      logger.debug('Could not fetch extensions:', error as Record<string, unknown>);
-    }
-
-    return [];
-  }
-
-  public async syncFromProject(editorType: EditorType): Promise<void> {
-    logger.info(`Syncing from project to ${this.getEditorPaths(editorType).name}...`);
-    await this.exportSettings(editorType);
   }
 
   public async syncToProject(editorType: EditorType): Promise<void> {

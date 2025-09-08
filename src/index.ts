@@ -105,9 +105,7 @@ program
 
 program
   .command('sync')
-  .description('Sync VS Code/Cursor settings')
-  .option('-i, --import', 'Import settings from VS Code/Cursor to project')
-  .option('-e, --export', 'Export settings from project to VS Code/Cursor')
+  .description('Import VS Code/Cursor settings for use inside container')
   .option('--editor <type>', 'Specify editor (vscode or cursor)')
   .action(async (options) => {
     await syncCommand(options);
