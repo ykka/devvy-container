@@ -137,7 +137,7 @@ async function generateGitHubSSHKeys(_projectRoot: string): Promise<void> {
 
     // Display the public key and instructions
     logger.info('\n📋 GitHub SSH Public Key:');
-    logger.box(publicKey.trim());
+    console.log(publicKey.trim());
 
     logger.info('\nTo complete GitHub SSH setup:');
     logger.step('1. Copy the public key above');
