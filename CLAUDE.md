@@ -26,8 +26,8 @@ npm run dev         # Run in development mode with hot reload
 
 ### Testing
 ```bash
-npm run test        # Run tests
-npm run test:watch  # Run tests in watch mode
+npm run test        # Run tests once and exit
+npm run test:watch  # Run tests in watch mode (continuous)
 npm run test:ui     # Open Vitest UI for interactive testing
 npm run test:coverage # Run tests with coverage report
 ```
@@ -54,10 +54,10 @@ devvy cleanup       # Clean up Docker resources
   - `utils/` - Utility functions
   - `types/` - TypeScript type definitions
   - `config/` - Configuration management
-- `tests/` - Test files mirroring src structure
-  - `commands/` - Tests for command implementations
-  - `services/` - Tests for services
-  - `utils/` - Tests for utilities
+  - `__tests__/` - Test files mirroring src structure
+    - `commands/` - Tests for command implementations
+    - `services/` - Tests for services
+    - `utils/` - Tests for utilities
 - `container-scripts/` - Bash scripts that run inside the container
 - `dist/` - Compiled JavaScript output (git-ignored)
 - `legacy-bash/` - Original bash scripts (temporary during migration)
@@ -83,9 +83,14 @@ npm run test:coverage # Generate coverage report
 ```
 
 ### Test Structure
-Tests are located in the `tests/` directory, mirroring the `src/` structure:
-- `tests/services/vscode.test.ts` - Tests for VS Code sync functionality
-- `tests/commands/setup.test.ts` - Tests for setup command (to be implemented)
+Tests are located in the `src/__tests__/` directory, mirroring the source structure:
+- `src/__tests__/services/vscode.test.ts` - Tests for VS Code sync functionality
+- `src/__tests__/commands/setup.test.ts` - Tests for setup command (to be implemented)
+
+**IMPORTANT**: Keep tests inside `src/__tests__/` directory, not in a separate `tests/` folder at the root. This ensures:
+- Tests are co-located with source code for better organization
+- TypeScript compilation includes test files for type checking
+- Path aliases work correctly in test files without additional configuration
 
 ### Writing Tests
 Tests use Vitest's API with TypeScript:

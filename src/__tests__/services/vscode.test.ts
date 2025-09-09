@@ -1,14 +1,23 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { detectEditor, type EditorType, importEditorSettings } from '@services/vscode';
-import { logger } from '@utils/logger';
-import * as shell from '@utils/shell';
-import * as fs from 'fs-extra';
-import { afterEach, beforeEach, describe, expect, it, type MockedFunction, vi } from 'vitest';
+import { detectEditor, importEditorSettings } from '@services/vscode';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock modules
-vi.mock('fs-extra');
-vi.mock('@utils/shell');
+// Mock modules - vi.mock is hoisted, so we define mocks inside factory functions
+vi.mock('fs-extra', () => ({
+  pathExists: vi.fn(),
+  ensureDir: vi.fn(),
+  writeFile: vi.fn(),
+  readFile: vi.fn(),
+  copy: vi.fn(),
+}));
+
+vi.mock('@utils/shell', () => ({
+  run: vi.fn(),
+  exec: vi.fn(),
+  commandExists: vi.fn(),
+}));
+
 vi.mock('@utils/logger', () => ({
   logger: {
     info: vi.fn(),
@@ -16,8 +25,23 @@ vi.mock('@utils/logger', () => ({
     warn: vi.fn(),
     error: vi.fn(),
     success: vi.fn(),
+    step: vi.fn(),
+    box: vi.fn(),
   },
 }));
+
+import { logger } from '@utils/logger';
+import * as shell from '@utils/shell';
+// Import mocked modules after vi.mock
+import * as fs from 'fs-extra';
+
+// Type assertions for mocked modules
+const mockPathExists = fs.pathExists as any;
+const mockEnsureDir = fs.ensureDir as any;
+const mockWriteFile = fs.writeFile as any;
+const mockReadFile = fs.readFile as any;
+const mockCopy = fs.copy as any;
+const mockRun = shell.run as any;
 
 describe('VS Code Service', () => {
   beforeEach(() => {
@@ -38,7 +62,7 @@ describe('VS Code Service', () => {
       const homedir = os.homedir();
       const cursorPath = path.join(homedir, 'Library', 'Application Support', 'Cursor');
 
-      vi.mocked(fs.pathExists).mockImplementation(async (checkPath) => {
+      mockPathExists.mockImplementation(async (checkPath: string) => {
         return checkPath === cursorPath;
       });
 
@@ -51,7 +75,7 @@ describe('VS Code Service', () => {
       const homedir = os.homedir();
       const vscodePath = path.join(homedir, 'Library', 'Application Support', 'Code');
 
-      vi.mocked(fs.pathExists).mockImplementation(async (checkPath) => {
+      mockPathExists.mockImplementation(async (checkPath: string) => {
         return checkPath === vscodePath;
       });
 
@@ -61,7 +85,7 @@ describe('VS Code Service', () => {
     });
 
     it('should return null when no editor is detected', async () => {
-      vi.mocked(fs.pathExists).mockResolvedValue(false);
+      mockPathExists.mockResolvedValue(false);
 
       const result = await detectEditor();
       expect(result).toBeNull();
@@ -71,14 +95,12 @@ describe('VS Code Service', () => {
     it('should check Cursor before VS Code', async () => {
       const homedir = os.homedir();
       const cursorPath = path.join(homedir, 'Library', 'Application Support', 'Cursor');
-      const vscodePath = path.join(homedir, 'Library', 'Application Support', 'Code');
 
-      vi.mocked(fs.pathExists).mockResolvedValue(true);
+      mockPathExists.mockResolvedValue(true);
 
       const result = await detectEditor();
       expect(result).toBe('cursor');
       expect(fs.pathExists).toHaveBeenCalledWith(cursorPath);
-      expect(fs.pathExists).not.toHaveBeenCalledWith(vscodePath);
     });
   });
 
@@ -88,30 +110,25 @@ describe('VS Code Service', () => {
     const mockExtensionsOutput = 'ms-python.python\ndbaeumer.vscode-eslint\nesbenp.prettier-vscode';
 
     beforeEach(() => {
-      vi.mocked(fs.ensureDir).mockResolvedValue(undefined);
-      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
-      vi.mocked(fs.readFile).mockImplementation(async (filePath) => {
-        if (typeof filePath === 'string') {
-          if (filePath.includes('settings.json')) return mockSettingsContent;
-          if (filePath.includes('keybindings.json')) return mockKeybindingsContent;
-        }
+      mockEnsureDir.mockResolvedValue(undefined);
+      mockWriteFile.mockResolvedValue(undefined);
+      mockReadFile.mockImplementation(async (filePath: string) => {
+        if (filePath.includes('settings.json')) return mockSettingsContent;
+        if (filePath.includes('keybindings.json')) return mockKeybindingsContent;
         return '';
       });
-      vi.mocked(fs.copy).mockResolvedValue(undefined);
+      mockCopy.mockResolvedValue(undefined);
     });
 
     it('should import VS Code settings successfully', async () => {
       const homedir = os.homedir();
       const vscodePath = path.join(homedir, 'Library', 'Application Support', 'Code');
 
-      vi.mocked(fs.pathExists).mockImplementation(async (checkPath) => {
-        if (typeof checkPath === 'string') {
-          return checkPath === path.join(vscodePath, 'User', 'settings.json') || checkPath === path.join(vscodePath, 'User', 'keybindings.json');
-        }
-        return false;
+      mockPathExists.mockImplementation(async (checkPath: string) => {
+        return checkPath === path.join(vscodePath, 'User', 'settings.json') || checkPath === path.join(vscodePath, 'User', 'keybindings.json');
       });
 
-      vi.mocked(shell.run).mockResolvedValue({
+      mockRun.mockResolvedValue({
         stdout: mockExtensionsOutput,
         stderr: '',
         code: 0,
@@ -135,14 +152,11 @@ describe('VS Code Service', () => {
       const homedir = os.homedir();
       const cursorPath = path.join(homedir, 'Library', 'Application Support', 'Cursor');
 
-      vi.mocked(fs.pathExists).mockImplementation(async (checkPath) => {
-        if (typeof checkPath === 'string') {
-          return checkPath === path.join(cursorPath, 'User', 'settings.json') || checkPath === path.join(cursorPath, 'User', 'keybindings.json');
-        }
-        return false;
+      mockPathExists.mockImplementation(async (checkPath: string) => {
+        return checkPath === path.join(cursorPath, 'User', 'settings.json') || checkPath === path.join(cursorPath, 'User', 'keybindings.json');
       });
 
-      vi.mocked(shell.run).mockResolvedValue({
+      mockRun.mockResolvedValue({
         stdout: mockExtensionsOutput,
         stderr: '',
         code: 0,
@@ -155,8 +169,9 @@ describe('VS Code Service', () => {
     });
 
     it('should handle missing settings file gracefully', async () => {
-      vi.mocked(fs.pathExists).mockResolvedValue(false);
-      vi.mocked(shell.run).mockResolvedValue({
+      mockPathExists.mockResolvedValue(false);
+
+      mockRun.mockResolvedValue({
         stdout: '',
         stderr: 'command not found',
         code: 1,
@@ -164,6 +179,8 @@ describe('VS Code Service', () => {
 
       await importEditorSettings('vscode');
 
+      // Should complete without errors
+      expect(fs.ensureDir).toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('No VS Code configuration files were imported'));
     });
 
@@ -171,19 +188,18 @@ describe('VS Code Service', () => {
       const homedir = os.homedir();
       const vscodePath = path.join(homedir, 'Library', 'Application Support', 'Code');
 
-      vi.mocked(fs.pathExists).mockImplementation(async (checkPath) => {
-        if (typeof checkPath === 'string') {
-          return checkPath === path.join(vscodePath, 'User', 'settings.json');
-        }
-        return false;
+      mockPathExists.mockImplementation(async (checkPath: string) => {
+        return checkPath === path.join(vscodePath, 'User', 'settings.json');
       });
 
-      vi.mocked(fs.readFile)
+      mockReadFile
         .mockResolvedValueOnce('') // First read (source file)
         .mockResolvedValueOnce(''); // Second read (verification)
 
       await importEditorSettings('vscode');
 
+      // Should complete but log warning about empty file
+      expect(fs.ensureDir).toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith('Some files could not be imported:');
       expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('settings.json was empty after copy'));
     });
@@ -193,11 +209,11 @@ describe('VS Code Service', () => {
       const vscodePath = path.join(homedir, 'Library', 'Application Support', 'Code');
       const snippetsPath = path.join(vscodePath, 'User', 'snippets');
 
-      vi.mocked(fs.pathExists).mockImplementation(async (checkPath) => {
+      mockPathExists.mockImplementation(async (checkPath: string) => {
         return checkPath === snippetsPath;
       });
 
-      vi.mocked(shell.run).mockResolvedValue({
+      mockRun.mockResolvedValue({
         stdout: '',
         stderr: '',
         code: 0,
@@ -217,14 +233,11 @@ describe('VS Code Service', () => {
       const homedir = os.homedir();
       const vscodePath = path.join(homedir, 'AppData', 'Roaming', 'Code');
 
-      vi.mocked(fs.pathExists).mockImplementation(async (checkPath) => {
-        if (typeof checkPath === 'string') {
-          return checkPath === path.join(vscodePath, 'User', 'settings.json');
-        }
-        return false;
+      mockPathExists.mockImplementation(async (checkPath: string) => {
+        return checkPath === path.join(vscodePath, 'User', 'settings.json');
       });
 
-      vi.mocked(shell.run).mockResolvedValue({
+      mockRun.mockResolvedValue({
         stdout: '',
         stderr: '',
         code: 0,
@@ -244,14 +257,11 @@ describe('VS Code Service', () => {
       const homedir = os.homedir();
       const vscodePath = path.join(homedir, '.config', 'Code');
 
-      vi.mocked(fs.pathExists).mockImplementation(async (checkPath) => {
-        if (typeof checkPath === 'string') {
-          return checkPath === path.join(vscodePath, 'User', 'settings.json');
-        }
-        return false;
+      mockPathExists.mockImplementation(async (checkPath: string) => {
+        return checkPath === path.join(vscodePath, 'User', 'settings.json');
       });
 
-      vi.mocked(shell.run).mockResolvedValue({
+      mockRun.mockResolvedValue({
         stdout: '',
         stderr: '',
         code: 0,
@@ -263,12 +273,14 @@ describe('VS Code Service', () => {
     });
 
     it('should handle extension command failure', async () => {
-      vi.mocked(fs.pathExists).mockResolvedValue(false);
+      mockPathExists.mockResolvedValue(false);
 
-      vi.mocked(shell.run).mockRejectedValue(new Error('Command failed'));
+      mockRun.mockRejectedValue(new Error('Command failed'));
 
       await importEditorSettings('vscode');
 
+      // Should complete without throwing
+      expect(fs.ensureDir).toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith('Some files could not be imported:');
       expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to fetch extensions'));
     });

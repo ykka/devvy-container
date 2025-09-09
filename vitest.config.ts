@@ -5,10 +5,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
+    include: ['src/__tests__/**/*.test.ts'],
     coverage: {
       reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'dist/', 'tests/', '*.config.ts', 'legacy-bash/', 'container-scripts/'],
+      exclude: ['node_modules/', 'dist/', 'src/__tests__/', '*.config.ts', 'legacy-bash/', 'container-scripts/'],
     },
   },
   resolve: {

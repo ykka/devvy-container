@@ -38,5 +38,5 @@
     "skipLibCheck": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests", "legacy-bash"]
+  "exclude": ["node_modules", "dist", "legacy-bash"]
 }

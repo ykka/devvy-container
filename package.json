@@ -21,10 +21,10 @@
     "typecheck": "tsc --noEmit",
     "quality": "npm run typecheck && npm run lint && npm run format:check",
     "biome": "biome check --write",
-    "test": "vitest",
+    "test": "vitest run",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
-    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
     "prepare": "husky install",
     "pre-commit": "lint-staged"
   },
