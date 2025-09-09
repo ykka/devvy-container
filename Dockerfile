@@ -59,10 +59,8 @@ RUN mkdir /var/run/sshd && \
     sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && \
     sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
 
-# Install Node.js tools globally (yarn is already included in node:24)
-# Note: corepack enable provides pnpm, so we only need to install the other tools
-RUN corepack enable && \
-    npm install -g typescript @types/node tsx nodemon
+# Enable corepack for pnpm/yarn support
+RUN corepack enable
 
 # Install GitHub CLI
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
@@ -78,12 +76,16 @@ RUN git clone --depth 1 --branch stable https://github.com/neovim/neovim.git /tm
     make install && \
     rm -rf /tmp/neovim
 
-# Install Claude Code
-RUN npm install -g @anthropic-ai/claude-code
-
 # Switch to devvy user
 USER devvy
 WORKDIR /home/devvy
+
+# Configure npm to use a custom directory for global packages
+RUN mkdir -p ~/.npm-global && \
+    npm config set prefix '~/.npm-global'
+
+# Install Node.js tools globally as devvy user
+RUN npm install -g typescript @types/node tsx nodemon @anthropic-ai/claude-code
 
 # Install Python packages for Neovim
 RUN pip3 install --user --break-system-packages pynvim
@@ -91,7 +93,9 @@ RUN pip3 install --user --break-system-packages pynvim
 # Install oh-my-zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
     # Set a nice theme (you can change this to your preference)
-    sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc
+    sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc && \
+    # Add npm global binaries to PATH
+    echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.zshrc
 
 # Create directory structure
 RUN mkdir -p ~/.ssh ~/.config ~/.claude && \
