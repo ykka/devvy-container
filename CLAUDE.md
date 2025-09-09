@@ -24,6 +24,20 @@ npm run build       # Build the TypeScript project
 npm run dev         # Run in development mode with hot reload
 ```
 
+### Development Mode Commands
+**IMPORTANT**: When running in development mode, use:
+```bash
+npm run dev rebuild   # Rebuild container in dev mode
+npm run dev connect   # Connect to container in dev mode
+npm run dev start     # Start container in dev mode
+npm run dev setup     # Run setup in dev mode
+# etc...
+```
+
+**DO NOT** run:
+- `npm run dev` alone (this just starts the dev server)
+- `devvy rebuild` (use `npm run dev rebuild` instead)
+
 ### Testing
 ```bash
 npm run test        # Run tests once and exit

@@ -120,7 +120,14 @@ USER root
 # Copy scripts
 COPY container-scripts/init-firewall.sh /usr/local/bin/init-firewall.sh
 COPY container-scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY container-scripts/devvy-motd.sh /usr/local/bin/devvy-motd.sh
 RUN chmod +x /usr/local/bin/*.sh
+
+# Disable default MOTD and setup custom welcome message
+RUN rm -f /etc/motd /etc/update-motd.d/* && \
+    echo "" > /etc/motd && \
+    touch /home/devvy/.hushlogin && \
+    chown ${HOST_UID}:${HOST_GID} /home/devvy/.hushlogin
 
 # Expose ports for various services:
 # 22            - SSH access to the container

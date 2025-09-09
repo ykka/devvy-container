@@ -18,7 +18,12 @@ source $ZSH/oh-my-zsh.sh
 if [[ -f /.dockerenv ]] || [[ -n "$DEVCONTAINER" ]] || grep -q 'docker\|lxc' /proc/1/cgroup 2>/dev/null; then
     # We're in a container - add indicator to prompt
     # You can customize the indicator here (change "devvy" to whatever you prefer)
-    PROMPT="%{$fg_bold[cyan]%}(claude-devvy-container)%{$reset_color%} $PROMPT"
+    PROMPT="%{$fg_bold[cyan]%}(🛡️devvy-container)%{$reset_color%} $PROMPT"
+fi
+
+# Display custom MOTD on login (only for interactive shells)
+if [[ -o interactive ]] && [[ -f /usr/local/bin/devvy-motd.sh ]]; then
+    /usr/local/bin/devvy-motd.sh
 fi
 
 # Add npm global packages to PATH
