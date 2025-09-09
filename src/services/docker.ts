@@ -1,3 +1,5 @@
+import type { Readable } from 'node:stream';
+
 import { CONSTANTS } from '@config/constants';
 import { logger } from '@utils/logger';
 import Docker from 'dockerode';
@@ -175,7 +177,7 @@ export async function execInContainer(name: string, command: string[]): Promise<
 /**
  * Run docker-compose up
  */
-export async function composeUp(detach = true, build = false): Promise<void> {
+export async function composeUp(detach = true, build = false): Promise<boolean> {
   const command = ['docker', 'compose', '-p', CONSTANTS.DOCKER.PROJECT_NAME, '-f', CONSTANTS.DOCKER.COMPOSE_FILE, 'up'];
 
   if (detach) {
@@ -195,10 +197,12 @@ export async function composeUp(detach = true, build = false): Promise<void> {
   });
 
   if (result.exitCode !== 0) {
-    throw new Error('Failed to run docker-compose up');
+    logger.error('Failed to run docker-compose up');
+    return false;
   }
 
   logger.success('Docker Compose up completed successfully');
+  return true;
 }
 
 /**
@@ -229,7 +233,7 @@ export async function composeDown(removeVolumes = false): Promise<void> {
 /**
  * Build docker-compose services
  */
-export async function composeBuild(noCache = false): Promise<void> {
+export async function composeBuild(noCache = false): Promise<boolean> {
   const command = ['docker', 'compose', '-p', CONSTANTS.DOCKER.PROJECT_NAME, '-f', CONSTANTS.DOCKER.COMPOSE_FILE, 'build'];
 
   if (noCache) {
@@ -245,8 +249,143 @@ export async function composeBuild(noCache = false): Promise<void> {
   });
 
   if (result.exitCode !== 0) {
-    throw new Error('Failed to build Docker image');
+    logger.error('Failed to build Docker image');
+    return false;
   }
 
   logger.success('Docker image built successfully');
+  return true;
+}
+
+/**
+ * Stream container logs in real-time
+ */
+export async function streamContainerLogs(name: string, onData: (chunk: string) => void, since?: number): Promise<() => void> {
+  const container = await getContainer(name);
+
+  const logStream = (await container.logs({
+    stdout: true,
+    stderr: true,
+    follow: true,
+    timestamps: false,
+    since: since || 0,
+  })) as unknown as Readable;
+
+  // Handle Docker's multiplexed stream format
+  let buffer = Buffer.alloc(0);
+
+  const handleData = (chunk: Buffer) => {
+    buffer = Buffer.concat([buffer, chunk]);
+
+    // Process complete frames from the buffer
+    while (buffer.length >= 8) {
+      // Docker multiplexed stream format:
+      // [STREAM_TYPE:1][PADDING:3][SIZE:4][PAYLOAD:SIZE]
+      const header = buffer.slice(0, 8);
+      const payloadSize = header.readUInt32BE(4);
+
+      if (buffer.length < 8 + payloadSize) {
+        // Not enough data for complete frame
+        break;
+      }
+
+      const payload = buffer.slice(8, 8 + payloadSize);
+      const text = payload.toString('utf8');
+
+      // Send the text line by line
+      const lines = text.split('\n').filter((line) => line.trim());
+      for (const line of lines) {
+        onData(line);
+      }
+
+      // Remove processed frame from buffer
+      buffer = buffer.slice(8 + payloadSize);
+    }
+  };
+
+  logStream.on('data', handleData);
+
+  // Return cleanup function
+  return () => {
+    logStream.destroy();
+  };
+}
+
+/**
+ * Wait for container to be ready by monitoring logs
+ */
+export async function waitForContainerReady(
+  name: string,
+  options: {
+    readyMarker?: string;
+    errorPatterns?: string[];
+    timeout?: number;
+    onProgress?: (line: string) => void;
+  } = {},
+): Promise<{ ready: boolean; logs: string[]; error?: string }> {
+  const {
+    readyMarker = '--CLAUDE-DEVVY-CONTAINER-READY--',
+    errorPatterns = ['[INIT:ERROR]', 'ERROR:', 'Failed to', 'Permission denied', 'timeout'],
+    timeout = 60000,
+    onProgress,
+  } = options;
+
+  const logs: string[] = [];
+  let error: string | undefined;
+  let cleanup: (() => void) | undefined;
+
+  return new Promise((resolve) => {
+    const timeoutId = setTimeout(() => {
+      if (cleanup) cleanup();
+      resolve({
+        ready: false,
+        logs: logs.slice(-50), // Last 50 lines for debugging
+        error: `Container initialization timed out after ${timeout / 1000} seconds`,
+      });
+    }, timeout);
+
+    // Start streaming logs
+    streamContainerLogs(name, (line) => {
+      logs.push(line);
+
+      // Send progress update
+      if (onProgress) {
+        onProgress(line);
+      }
+
+      // Check for ready marker
+      if (line.includes(readyMarker)) {
+        clearTimeout(timeoutId);
+        if (cleanup) cleanup();
+        resolve({ ready: true, logs });
+        return;
+      }
+
+      // Check for error patterns
+      for (const pattern of errorPatterns) {
+        if (line.includes(pattern)) {
+          error = `Initialization failed: ${line}`;
+          clearTimeout(timeoutId);
+          if (cleanup) cleanup();
+          resolve({
+            ready: false,
+            logs: logs.slice(-50),
+            error,
+          });
+          return;
+        }
+      }
+    })
+      .then((cleanupFn) => {
+        cleanup = cleanupFn;
+      })
+      .catch((err) => {
+        clearTimeout(timeoutId);
+        resolve({
+          ready: false,
+          logs,
+          error: `Failed to stream logs: ${err.message}`,
+        });
+      });
+  });
 }

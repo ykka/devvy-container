@@ -78,38 +78,44 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
 
     startSpinner.succeed('Container started');
 
-    // Step 7: Wait for container to be ready
-    const containerReadySpinner = new Spinner('Waiting for container to be ready...');
-    containerReadySpinner.start();
+    // Step 7: Wait for container to be ready by monitoring logs
+    logger.info('\n📋 Monitoring container initialization...');
+    logger.info(chalk.gray('Waiting for container to complete initialization...\n'));
 
-    let containerReady = false;
-    let attempts = 0;
-    const maxAttempts = 30;
-
-    while (!containerReady && attempts < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      try {
-        // Check if container can execute commands
-        const result = await docker.execInContainer(containerName, ['true']);
-        if (result.exitCode === 0) {
-          // Also check if SSH port is listening
-          const sshCheck = await docker.execInContainer(containerName, ['sh', '-c', 'netstat -tln | grep :22']);
-          if (sshCheck.exitCode === 0) {
-            containerReady = true;
-          }
+    const readyResult = await docker.waitForContainerReady(containerName, {
+      timeout: 60000, // 60 seconds timeout
+      onProgress: (line) => {
+        // Show initialization progress to user
+        if (line.startsWith('[INIT]')) {
+          logger.info(chalk.gray(`  ${line}`));
         }
-      } catch {
-        // Container not ready yet
-      }
-      attempts++;
-    }
+      },
+    });
 
-    if (!containerReady) {
-      containerReadySpinner.fail('Container did not become ready in time');
+    if (!readyResult.ready) {
+      logger.error('\n❌ Container initialization failed!');
+
+      if (readyResult.error) {
+        logger.error(`Error: ${readyResult.error}`);
+      }
+
+      if (readyResult.logs.length > 0) {
+        logger.error('\nLast log entries before failure:');
+        for (const logLine of readyResult.logs.slice(-10)) {
+          logger.error(chalk.gray(`  ${logLine}`));
+        }
+      }
+
+      logger.info('\nTroubleshooting tips:');
+      logger.step('Check if all required files are present in ./secrets/');
+      logger.step('Ensure Docker has enough resources allocated');
+      logger.step('Try rebuilding with --no-cache flag');
+      logger.step(`Run ${chalk.cyan('devvy logs -f')} in another terminal for detailed output`);
+
       process.exit(1);
     }
 
-    containerReadySpinner.succeed('Container is ready');
+    logger.success('\n✅ Container initialization completed successfully!');
 
     // Step 8: Add container's new SSH key to host's known_hosts
     console.log(`\n${chalk.blue("Adding container's new SSH key to host's known_hosts...")}`);

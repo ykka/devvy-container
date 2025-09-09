@@ -1,5 +1,10 @@
 #!/bin/bash
-set -e
+set -euo pipefail
+
+# Error handling
+trap 'echo "[INIT:ERROR] Error on line $LINENO"; exit 1' ERR
+
+echo "[INIT] Starting container initialization..."
 
 # Get the devvy user's group name for use later
 DEVVY_GROUP=$(id -gn devvy)
@@ -8,14 +13,29 @@ DEVVY_GROUP=$(id -gn devvy)
 # The /home/devvy/repos directory is mounted from the host's ${PROJECTS_PATH}
 export PROJECTS_PATH=/home/devvy/repos
 
+# Fix volume ownership first (Priority 1)
+echo "[INIT] Fixing volume ownership..."
+for dir in "/home/devvy/.local/share/nvim" \
+           "/home/devvy/.local/share/zsh" \
+           "/home/devvy/.local/share/pnpm" \
+           "/home/devvy/.local/share/claude-code" \
+           "/home/devvy/.npm" \
+           "/home/devvy/.vscode-server" \
+           "/home/devvy/.vscode-server-insiders"; do
+    if [ -d "$dir" ]; then
+        chown -R devvy:${DEVVY_GROUP} "$dir" || echo "Warning: Could not change ownership of $dir"
+    fi
+done
+
 # Initialize firewall if running with network admin capabilities
 if capsh --print | grep -q cap_net_admin; then
-    echo "Initializing firewall rules..."
-    /usr/local/bin/init-firewall.sh
+    echo "[INIT] Initializing firewall rules..."
+    /usr/local/bin/init-firewall.sh || { echo "ERROR: Failed to initialize firewall"; exit 1; }
 fi
 
 # Setup SSH authorized_keys for access from local machine
 if [ -f /secrets/authorized_keys ]; then
+    echo "[INIT] Setting up SSH keys..."
     cp /secrets/authorized_keys /home/devvy/.ssh/authorized_keys
     chown devvy:${DEVVY_GROUP} /home/devvy/.ssh/authorized_keys
     chmod 600 /home/devvy/.ssh/authorized_keys
@@ -23,7 +43,7 @@ fi
 
 # Setup GitHub SSH authentication if keys are mounted
 if [ -d "/github-ssh" ] && [ -f "/github-ssh/github_rsa" ]; then
-    echo "Setting up GitHub SSH authentication..."
+    echo "[INIT] Configuring GitHub SSH..."
     
     # Copy GitHub SSH keys to devvy's .ssh directory
     cp /github-ssh/github_rsa /home/devvy/.ssh/github_rsa
@@ -46,16 +66,21 @@ EOF
     chmod 600 /home/devvy/.ssh/config
     
     # Add GitHub to known hosts
-    su - devvy -c "ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null"
+    if ! su - devvy -c "ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null"; then
+        echo "WARNING: Failed to add GitHub to known hosts"
+    fi
     
     # Configure gh CLI to use SSH for git operations
-    su - devvy -c "gh config set git_protocol ssh --host github.com" 2>/dev/null || true
+    if ! su - devvy -c "gh config set git_protocol ssh --host github.com 2>/dev/null"; then
+        echo "WARNING: gh CLI not available or configuration failed"
+    fi
     
-    echo "GitHub SSH authentication configured"
+    echo "[INIT] GitHub SSH authentication configured"
 fi
 
 # Configure Git with provided user info - skip if .gitconfig is read-only
 if [ -w "/home/devvy/.gitconfig" ] || [ ! -e "/home/devvy/.gitconfig" ]; then
+    echo "[INIT] Configuring Git..."
     if [ -n "$GIT_USER_NAME" ] && [ "$GIT_USER_NAME" != "Your Name" ]; then
         su - devvy -c "git config --global user.name \"$GIT_USER_NAME\"" || echo "Warning: Could not set git user.name"
     fi
@@ -67,16 +92,20 @@ else
     echo "Git config is read-only, skipping git configuration"
 fi
 
-# Install LazyVim plugins if config is mounted
+# Install LazyVim plugins if config is mounted (with timeout)
 if [ -d "/home/devvy/.config/nvim" ] && [ -f "/home/devvy/.config/nvim/init.lua" ]; then
-    echo "Neovim config detected, installing plugins..."
+    echo "[INIT] Installing Neovim plugins..."
     # Since config is read-only, plugins will be installed to ~/.local/share/nvim
-    su - devvy -c 'nvim --headless "+Lazy! sync" +qa' || echo "Plugin installation completed or skipped"
+    if ! timeout 30s su - devvy -c 'nvim --headless "+Lazy! sync" +qa'; then
+        echo "ERROR: Neovim plugin installation failed or timed out"
+        exit 1
+    fi
+    echo "[INIT] Neovim plugins installed successfully"
 fi
 
 # Install VS Code/Cursor extensions from extensions.txt
 if [ -f "/home/devvy/vscode-config/extensions.txt" ]; then
-    echo "Preparing VS Code Server extension list..."
+    echo "[INIT] Preparing VS Code extensions..."
     
     # Create directories for VS Code Server and Cursor Server
     su - devvy -c 'mkdir -p ~/.vscode-server ~/.cursor-server'
@@ -133,25 +162,35 @@ EOF
         echo "Note: .zshrc is read-only, VS Code extensions will need manual installation"
     fi
     
-    echo "VS Code Server extension installer prepared"
+    echo "[INIT] VS Code Server extension installer prepared"
 fi
 
 # Skip permission changes on mounted directories - they inherit from host
 
 # Start SSH daemon
 if [ "$1" = "/usr/sbin/sshd" ]; then
-    echo "Starting SSH daemon..."
-    # Generate SSH server keys for the container if they don't exist
-    if [ ! -f /etc/ssh/ssh_host_ed25519_key ]; then
-        ssh-keygen -t ed25519 -f /etc/ssh/ssh_host_ed25519_key -N ""
-    fi
-    if [ ! -f /etc/ssh/ssh_host_rsa_key ]; then
-        ssh-keygen -t rsa -b 4096 -f /etc/ssh/ssh_host_rsa_key -N ""
+    echo "[INIT] Starting SSH daemon..."
+    
+    # Health check: verify sshd is available
+    if ! command -v sshd >/dev/null; then
+        echo "ERROR: sshd not found"
+        exit 1
     fi
     
-    echo "Container ready! SSH available on port 22"
-    echo "Container's SSH server key fingerprint:"
+    # Generate SSH server keys for the container if they don't exist
+    if [ ! -f /etc/ssh/ssh_host_ed25519_key ]; then
+        ssh-keygen -t ed25519 -f /etc/ssh/ssh_host_ed25519_key -N "" || { echo "ERROR: Failed to generate ED25519 host key"; exit 1; }
+    fi
+    if [ ! -f /etc/ssh/ssh_host_rsa_key ]; then
+        ssh-keygen -t rsa -b 4096 -f /etc/ssh/ssh_host_rsa_key -N "" || { echo "ERROR: Failed to generate RSA host key"; exit 1; }
+    fi
+    
+    echo "[INIT] Container ready! SSH available on port 22"
+    echo "[INIT] Container's SSH server key fingerprint:"
     ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+    
+    # Final marker indicating successful initialization
+    echo "--CLAUDE-DEVVY-CONTAINER-READY--"
     
     # Start sshd in foreground
     exec /usr/sbin/sshd -D
