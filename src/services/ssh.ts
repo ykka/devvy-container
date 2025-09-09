@@ -157,3 +157,58 @@ export function getSSHConfig(): {
     keyPath,
   };
 }
+
+/**
+ * Generate GitHub SSH key pair on the local machine for authenticating with GitHub.
+ * The keys are stored in secrets/github/ directory and persist across rebuilds.
+ */
+export async function generateGitHubSSHKey(regenerate = false): Promise<{
+  publicKey: string;
+  privateKeyPath: string;
+  existed: boolean;
+}> {
+  const githubKeysDir = path.join(secretsDir, CONSTANTS.SSH.GITHUB_KEY_DIR);
+  const privateKeyPath = path.join(githubKeysDir, CONSTANTS.SSH.GITHUB_KEY_NAME);
+  const publicKeyPath = `${privateKeyPath}.pub`;
+
+  await fs.ensureDir(githubKeysDir);
+
+  // Check if key already exists
+  if ((await fs.pathExists(privateKeyPath)) && !regenerate) {
+    logger.debug('GitHub SSH key already exists, using existing key');
+    const publicKey = await fs.readFile(publicKeyPath, 'utf8');
+    return { publicKey, privateKeyPath, existed: true };
+  }
+
+  // Remove old keys if regenerating
+  if (regenerate && (await fs.pathExists(privateKeyPath))) {
+    await fs.remove(privateKeyPath);
+    await fs.remove(publicKeyPath);
+    logger.info('Removing existing GitHub SSH key for regeneration');
+  }
+
+  // Generate new key pair
+  logger.info('Generating GitHub SSH key pair...');
+  const comment = `devvy-github-${new Date().toISOString().split('T')[0]}`;
+  const result = await execAsync('ssh-keygen', ['-t', 'rsa', '-b', '4096', '-f', privateKeyPath, '-N', '', '-C', comment]);
+
+  if (!result.success) {
+    throw new Error(`Failed to generate GitHub SSH key: ${result.stderr || 'Unknown error'}`);
+  }
+
+  await fs.chmod(privateKeyPath, 0o600);
+
+  const publicKey = await fs.readFile(publicKeyPath, 'utf8');
+  logger.success('GitHub SSH key generated successfully');
+
+  return { publicKey, privateKeyPath, existed: false };
+}
+
+/**
+ * Check if GitHub SSH key exists
+ */
+export async function gitHubSSHKeyExists(): Promise<boolean> {
+  const githubKeysDir = path.join(secretsDir, CONSTANTS.SSH.GITHUB_KEY_DIR);
+  const privateKeyPath = path.join(githubKeysDir, CONSTANTS.SSH.GITHUB_KEY_NAME);
+  return fs.pathExists(privateKeyPath);
+}

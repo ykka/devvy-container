@@ -21,9 +21,37 @@ if [ -f /secrets/authorized_keys ]; then
     chmod 600 /home/devvy/.ssh/authorized_keys
 fi
 
-# Setup GitHub authentication if token provided
-if [ -n "$GITHUB_TOKEN" ]; then
-    echo "$GITHUB_TOKEN" | su - devvy -c 'gh auth login --with-token'
+# Setup GitHub SSH authentication if keys are mounted
+if [ -d "/github-ssh" ] && [ -f "/github-ssh/github_rsa" ]; then
+    echo "Setting up GitHub SSH authentication..."
+    
+    # Copy GitHub SSH keys to devvy's .ssh directory
+    cp /github-ssh/github_rsa /home/devvy/.ssh/github_rsa
+    cp /github-ssh/github_rsa.pub /home/devvy/.ssh/github_rsa.pub
+    chown devvy:${DEVVY_GROUP} /home/devvy/.ssh/github_rsa*
+    chmod 600 /home/devvy/.ssh/github_rsa
+    chmod 644 /home/devvy/.ssh/github_rsa.pub
+    
+    # Create SSH config for GitHub
+    cat > /home/devvy/.ssh/config << 'EOF'
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/github_rsa
+    IdentitiesOnly yes
+    StrictHostKeyChecking no
+EOF
+    
+    chown devvy:${DEVVY_GROUP} /home/devvy/.ssh/config
+    chmod 600 /home/devvy/.ssh/config
+    
+    # Add GitHub to known hosts
+    su - devvy -c "ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null"
+    
+    # Configure gh CLI to use SSH for git operations
+    su - devvy -c "gh config set git_protocol ssh --host github.com" 2>/dev/null || true
+    
+    echo "GitHub SSH authentication configured"
 fi
 
 # Configure Git with provided user info - skip if .gitconfig is read-only

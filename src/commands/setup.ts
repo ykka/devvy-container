@@ -21,7 +21,7 @@ export async function setupCommand(): Promise<void> {
 
     const projectRoot = getProjectRoot();
 
-    const steps = [checkDockerInstallation, checkDockerCompose, createDirectories, generateSSHKeys, setupUserConfig, setupVSCodeSync];
+    const steps = [checkDockerInstallation, checkDockerCompose, createDirectories, generateSSHKeys, generateGitHubSSHKeys, setupUserConfig, setupVSCodeSync];
 
     for (const step of steps) {
       await step(projectRoot);
@@ -101,6 +101,57 @@ async function generateSSHKeys(_projectRoot: string): Promise<void> {
     spinner.succeed('Host SSH keys configured');
   } catch (error) {
     spinner.fail('Failed to generate SSH keys');
+    throw error;
+  }
+}
+
+async function generateGitHubSSHKeys(_projectRoot: string): Promise<void> {
+  // Check if GitHub SSH key already exists
+  const keyExists = await ssh.gitHubSSHKeyExists();
+
+  if (keyExists) {
+    logger.warn('\n⚠️  GitHub SSH key already exists');
+    logger.info('Regenerating the key will require you to:');
+    logger.step('1. Remove the old key from GitHub');
+    logger.step('2. Add the new key to GitHub');
+    logger.step('3. Update any scripts or CI/CD that use the old key');
+
+    const regenerate = await prompt.confirm('\nDo you want to regenerate the GitHub SSH key?', false);
+    if (!regenerate) {
+      logger.info('Using existing GitHub SSH key');
+      return;
+    }
+  } else {
+    const useGitHub = await prompt.confirm('\nWould you like to configure GitHub SSH authentication?', true);
+    if (!useGitHub) {
+      return;
+    }
+  }
+
+  const spinner = new Spinner('Setting up GitHub SSH keys...');
+  spinner.start();
+
+  try {
+    const { publicKey, existed } = await ssh.generateGitHubSSHKey(keyExists);
+    spinner.succeed(existed ? 'GitHub SSH key regenerated' : 'GitHub SSH keys generated');
+
+    // Display the public key and instructions
+    logger.info('\n📋 GitHub SSH Public Key:');
+    logger.box(publicKey.trim());
+
+    logger.info('\nTo complete GitHub SSH setup:');
+    logger.step('1. Copy the public key above');
+    logger.step(`2. Go to ${chalk.cyan('https://github.com/settings/ssh/new')}`);
+    logger.step(`3. Add a title like "${chalk.yellow('Devvy Container SSH Key')}"`);
+    logger.step('4. Paste the public key and save');
+
+    if (keyExists) {
+      logger.warn('\n⚠️  Remember to remove the old key from GitHub after adding the new one');
+    }
+
+    await prompt.confirm('\nPress Enter when you have added the key to GitHub...', true);
+  } catch (error) {
+    spinner.fail('Failed to generate GitHub SSH keys');
     throw error;
   }
 }
@@ -206,29 +257,14 @@ async function setupUserConfig(_projectRoot: string): Promise<void> {
     github: undefined,
   };
 
-  // GitHub token
-  const useGitHub = await prompt.confirm('Would you like to configure GitHub CLI integration?', !!existingConfig?.integrations?.github?.token);
-  if (useGitHub) {
-    if (existingConfig?.integrations?.github?.token) {
-      const updateToken = await prompt.confirm('Update existing GitHub token?', false);
-      if (updateToken) {
-        const token = await prompt.password({
-          message: 'GitHub personal access token:',
-          mask: '*',
-        });
-        integrations.github = { token };
-      } else {
-        integrations.github = existingConfig.integrations.github;
-      }
-    } else {
-      const token = await prompt.password({
-        message: 'GitHub personal access token:',
-        mask: '*',
-      });
-      if (token) {
-        integrations.github = { token };
-      }
-    }
+  // Check if GitHub SSH is configured
+  const githubSSHConfigured = await ssh.gitHubSSHKeyExists();
+
+  // If GitHub SSH is configured, save that in the config
+  if (githubSSHConfigured) {
+    integrations.github = {
+      sshKeyConfigured: true,
+    };
   }
 
   // Step 3: LazyVim

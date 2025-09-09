@@ -65,6 +65,12 @@ services:
         source: ./secrets
         target: /secrets
         read_only: true
+      
+      # GitHub SSH keys for authentication
+      - type: bind
+        source: ./secrets/github
+        target: /github-ssh
+        read_only: true
 
       # Persistent data
       - nvim-data:/home/devvy/.local/share/nvim
@@ -81,7 +87,6 @@ services:
     environment:
       GIT_USER_NAME: ${GIT_USER_NAME}
       GIT_USER_EMAIL: ${GIT_USER_EMAIL}
-      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       LINEAR_API_KEY: ${LINEAR_API_KEY:-}
       INSTALL_LAZYVIM: ${INSTALL_LAZYVIM:-false}
       FIREWALL_ALLOWED_DOMAINS: ${FIREWALL_ALLOWED_DOMAINS:-}

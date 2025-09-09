@@ -24,6 +24,16 @@ npm run build       # Build the TypeScript project
 npm run dev         # Run in development mode with hot reload
 ```
 
+### Testing
+```bash
+npm run test        # Run tests
+npm run test:watch  # Run tests in watch mode
+npm run test:ui     # Open Vitest UI for interactive testing
+npm run test:coverage # Run tests with coverage report
+```
+
+**Note**: Run `npm install` first to install test dependencies if you haven't already.
+
 ### CLI Usage
 ```bash
 devvy setup         # Initial setup wizard (collects configuration interactively)
@@ -44,6 +54,10 @@ devvy cleanup       # Clean up Docker resources
   - `utils/` - Utility functions
   - `types/` - TypeScript type definitions
   - `config/` - Configuration management
+- `tests/` - Test files mirroring src structure
+  - `commands/` - Tests for command implementations
+  - `services/` - Tests for services
+  - `utils/` - Tests for utilities
 - `container-scripts/` - Bash scripts that run inside the container
 - `dist/` - Compiled JavaScript output (git-ignored)
 - `legacy-bash/` - Original bash scripts (temporary during migration)
@@ -52,9 +66,37 @@ devvy cleanup       # Clean up Docker resources
 Currently migrating from bash to TypeScript following the plans in `_plans/` directory.
 
 ## Testing
+
+### Testing Framework
+The project uses **Vitest** for testing, which provides:
+- Fast test execution with native TypeScript support
+- Jest-compatible API
+- Built-in mocking capabilities
+- Watch mode for development
+
+### Running Tests
+```bash
+npm run test        # Run all tests once
+npm run test:watch  # Run tests in watch mode during development
+npm run test:ui     # Open Vitest UI for interactive testing
+npm run test:coverage # Generate coverage report
+```
+
+### Test Structure
+Tests are located in the `tests/` directory, mirroring the `src/` structure:
+- `tests/services/vscode.test.ts` - Tests for VS Code sync functionality
+- `tests/commands/setup.test.ts` - Tests for setup command (to be implemented)
+
+### Writing Tests
+Tests use Vitest's API with TypeScript:
+```typescript
+import { describe, it, expect, vi } from 'vitest';
+```
+
 Before committing, always run:
 ```bash
-npm run quality
+npm run quality     # Typecheck and lint
+npm run test        # Run tests
 ```
 
 ## Important Notes

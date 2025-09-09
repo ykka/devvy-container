@@ -21,6 +21,10 @@
     "typecheck": "tsc --noEmit",
     "quality": "npm run typecheck && npm run lint && npm run format:check",
     "biome": "biome check --write",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:watch": "vitest --watch",
     "prepare": "husky install",
     "pre-commit": "lint-staged"
   },
@@ -47,17 +51,20 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.3",
+    "@testing-library/jest-dom": "^6.1.5",
     "@types/dockerode": "^3.3.23",
     "@types/fs-extra": "^11.0.4",
     "@types/inquirer": "^9.0.7",
     "@types/node": "^20.10.0",
     "@types/which": "^3.0.3",
+    "@vitest/ui": "^1.2.0",
     "husky": "^8.0.3",
     "lint-staged": "^15.2.0",
     "rimraf": "^5.0.5",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.6.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
   },
   "keywords": [
     "docker",

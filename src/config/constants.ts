@@ -18,6 +18,8 @@ export const CONSTANTS = {
   SSH: {
     PORT: 2222,
     KEY_NAME: 'host_rsa', // SSH key on local/host machine for connecting to container
+    GITHUB_KEY_NAME: 'github_rsa', // SSH key for GitHub authentication
+    GITHUB_KEY_DIR: 'github', // Directory for GitHub SSH keys within secrets
   },
 
   // Host paths (relative to project root)

@@ -23,9 +23,6 @@ export const envSchema = z.object({
   LAZYVIM_CONFIG_PATH: z.string().optional(),
   TMUX_CONFIG_PATH: z.string().optional(),
 
-  // Optional Integrations
-  GITHUB_TOKEN: z.string().optional(),
-
   // System
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']),
 
@@ -101,13 +98,6 @@ export async function generateEnvFile(config: UserConfig): Promise<void> {
     `INSTALL_LAZYVIM=${config.editor.lazyvim?.enabled === true ? 'true' : 'false'}`,
     '',
   ];
-
-  // Integrations
-  if (config.integrations.github?.token) {
-    envLines.push('# GitHub Integration');
-    envLines.push(`GITHUB_TOKEN=${config.integrations.github.token}`);
-    envLines.push('');
-  }
 
   // Editor settings
   if (config.editor.lazyvim) {

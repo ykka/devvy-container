@@ -11,7 +11,7 @@ export const userConfigSchema = z.object({
   integrations: z.object({
     github: z
       .object({
-        token: z.string(),
+        sshKeyConfigured: z.boolean().default(false),
       })
       .optional(),
   }),

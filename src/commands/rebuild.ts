@@ -26,6 +26,30 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
       }
     }
 
+    // Check if GitHub SSH keys exist and ask about regeneration
+    const githubKeyExists = await ssh.gitHubSSHKeyExists();
+    if (githubKeyExists) {
+      logger.info('\n🔑 GitHub SSH key exists');
+      logger.warn('⚠️  Regenerating the key will require you to:');
+      logger.step('1. Remove the old key from GitHub');
+      logger.step('2. Add the new key to GitHub');
+      logger.step('3. Update any scripts or CI/CD that use the old key');
+
+      const regenerateKey = await prompt.confirm('\nDo you want to regenerate the GitHub SSH key?', false);
+      if (regenerateKey) {
+        const { publicKey } = await ssh.generateGitHubSSHKey(true);
+        logger.info('\n📋 New GitHub SSH Public Key generated:');
+        logger.box(publicKey.trim());
+        logger.info('\nTo update GitHub with the new key:');
+        logger.step(`1. Go to ${chalk.cyan('https://github.com/settings/keys')}`);
+        logger.step('2. Delete the old Devvy Container SSH Key');
+        logger.step('3. Add the new key with the same title');
+        await prompt.confirm('\nPress Enter to continue with rebuild...', true);
+      } else {
+        logger.info('Keeping existing GitHub SSH key');
+      }
+    }
+
     // Step 1: Stop container if running
     if (isRunning) {
       const spinner = new Spinner('Stopping container...');
