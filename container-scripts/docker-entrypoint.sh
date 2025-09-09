@@ -152,14 +152,9 @@ EOF
     chmod +x /home/devvy/.vscode-server-install-extensions.sh
     
     # Add to zshrc so it runs on each login (will check if already installed)
-    # Skip if .zshrc is read-only
-    if [ -w "/home/devvy/.zshrc" ]; then
-        if ! grep -q "vscode-server-install-extensions" /home/devvy/.zshrc 2>/dev/null; then
-            echo '# Auto-install VS Code/Cursor extensions' >> /home/devvy/.zshrc
-            echo '[ -f ~/.vscode-server-install-extensions.sh ] && ~/.vscode-server-install-extensions.sh &' >> /home/devvy/.zshrc
-        fi
-    else
-        echo "Note: .zshrc is read-only, VS Code extensions will need manual installation"
+    if ! grep -q "vscode-server-install-extensions" /home/devvy/.zshrc 2>/dev/null; then
+        echo '# Auto-install VS Code/Cursor extensions' >> /home/devvy/.zshrc
+        echo '[ -f ~/.vscode-server-install-extensions.sh ] && ~/.vscode-server-install-extensions.sh &' >> /home/devvy/.zshrc
     fi
     
     echo "[INIT] VS Code Server extension installer prepared"

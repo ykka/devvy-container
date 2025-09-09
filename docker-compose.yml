@@ -30,12 +30,6 @@ services:
         target: /home/devvy/.config/nvim
         read_only: true
 
-      # Zsh config (read-only)
-      - type: bind
-        source: ${ZSHRC_PATH:-${HOME}/.zshrc}
-        target: /home/devvy/.zshrc
-        read_only: true
-
       # Tmux config (conditional, read-only)
       - type: bind
         source: ${TMUX_CONFIG_PATH:-${HOME}/.config/tmux}

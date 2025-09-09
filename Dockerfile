@@ -91,15 +91,14 @@ RUN npm install -g typescript @types/node tsx nodemon @anthropic-ai/claude-code
 RUN pip3 install --user --break-system-packages pynvim
 
 # Install oh-my-zsh
-RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
-    # Set a nice theme (you can change this to your preference)
-    sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="agnoster"/' ~/.zshrc && \
-    # Add npm global binaries to PATH
-    echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.zshrc
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
 # Create directory structure
 RUN mkdir -p ~/.ssh ~/.config ~/.claude && \
     chmod 700 ~/.ssh
+
+# Copy the template .zshrc configuration
+COPY --chown=devvy:devvy templates/zsh/.zshrc /home/devvy/.zshrc
 
 # Setup SSH for GitHub (will be populated by entrypoint)
 RUN touch ~/.ssh/known_hosts && \
