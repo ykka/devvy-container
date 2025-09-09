@@ -32,7 +32,7 @@ npm run compile
 ```
 
 The setup wizard will:
-- Collect your configuration (GitHub token, Linear API key, etc.)
+- Collect your configuration (GitHub token, etc.)
 - Generate SSH keys for container access
 - Build the Docker image
 - Start the container
@@ -93,7 +93,6 @@ PROJECTS_PATH=/Users/you/repos
 
 # Optional services
 GITHUB_TOKEN=ghp_...
-LINEAR_API_KEY=lin_api_...
 ```
 
 ## Working with Projects

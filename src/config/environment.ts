@@ -25,7 +25,6 @@ export const envSchema = z.object({
 
   // Optional Integrations
   GITHUB_TOKEN: z.string().optional(),
-  LINEAR_API_KEY: z.string().optional(),
 
   // System
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']),
@@ -107,12 +106,6 @@ export async function generateEnvFile(config: UserConfig): Promise<void> {
   if (config.integrations.github?.token) {
     envLines.push('# GitHub Integration');
     envLines.push(`GITHUB_TOKEN=${config.integrations.github.token}`);
-    envLines.push('');
-  }
-
-  if (config.integrations.linear?.apiKey) {
-    envLines.push('# Linear Integration');
-    envLines.push(`LINEAR_API_KEY=${config.integrations.linear.apiKey}`);
     envLines.push('');
   }
 

@@ -14,11 +14,6 @@ export const userConfigSchema = z.object({
         token: z.string(),
       })
       .optional(),
-    linear: z
-      .object({
-        apiKey: z.string(),
-      })
-      .optional(),
   }),
   editor: z.object({
     lazyvim: z

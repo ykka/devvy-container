@@ -204,7 +204,6 @@ async function setupUserConfig(_projectRoot: string): Promise<void> {
   // Step 2: Integrations
   const integrations: UserConfig['integrations'] = {
     github: undefined,
-    linear: undefined,
   };
 
   // GitHub token
@@ -228,31 +227,6 @@ async function setupUserConfig(_projectRoot: string): Promise<void> {
       });
       if (token) {
         integrations.github = { token };
-      }
-    }
-  }
-
-  // Linear API key
-  const useLinear = await prompt.confirm('Would you like to configure Linear integration?', !!existingConfig?.integrations?.linear?.apiKey);
-  if (useLinear) {
-    if (existingConfig?.integrations?.linear?.apiKey) {
-      const updateKey = await prompt.confirm('Update existing Linear API key?', false);
-      if (updateKey) {
-        const apiKey = await prompt.password({
-          message: 'Linear API key:',
-          mask: '*',
-        });
-        integrations.linear = { apiKey };
-      } else {
-        integrations.linear = existingConfig.integrations.linear;
-      }
-    } else {
-      const apiKey = await prompt.password({
-        message: 'Linear API key:',
-        mask: '*',
-      });
-      if (apiKey) {
-        integrations.linear = { apiKey };
       }
     }
   }

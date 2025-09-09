@@ -3,9 +3,6 @@
   "integrations": {
     "github": {
       "token": ""
-    },
-    "linear": {
-      "apiKey": ""
     }
   },
   "editor": {

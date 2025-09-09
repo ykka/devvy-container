@@ -8,13 +8,6 @@
 ## Project Overview
 This is a Docker-based development environment CLI that's being migrated from bash scripts to TypeScript for improved maintainability, type safety, and developer experience.
 
-## Linear Project Information
-- **Project Name**: Devvy
-- **Project ID**: daa4f946-2c47-4d82-bf03-b12a05058a3e
-- **Project URL**: https://linear.app/ykka/project/devvy-a2ce8c9a5ebb
-- **Description**: claude-devvy-container is a safe container for running Claude Code and connecting via Cursor/VS Code to it with some extras.
-- **Lead**: Patryk Kabaj
-
 ## Key Commands to Run
 
 ### Linting and Type Checking
@@ -72,7 +65,7 @@ npm run quality
 
 ## Environment Variable Handling
 The setup command now:
-- Interactively collects optional configuration (GitHub token, Linear API key, editor settings)
+- Interactively collects optional configuration (GitHub token, editor settings)
 - Preserves existing values when re-running setup
 - Only prompts for updates when values already exist
 - Automatically detects user/group IDs and git configuration
