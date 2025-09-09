@@ -21,7 +21,8 @@ for dir in "/home/devvy/.local/share/nvim" \
            "/home/devvy/.local/share/claude-code" \
            "/home/devvy/.npm" \
            "/home/devvy/.vscode-server" \
-           "/home/devvy/.vscode-server-insiders"; do
+           "/home/devvy/.vscode-server-insiders" \
+           "/home/devvy/.tmux/plugins"; do
     if [ -d "$dir" ]; then
         chown -R devvy:${DEVVY_GROUP} "$dir" || echo "Warning: Could not change ownership of $dir"
     fi
@@ -101,6 +102,22 @@ if [ -d "/home/devvy/.config/nvim" ] && [ -f "/home/devvy/.config/nvim/init.lua"
         exit 1
     fi
     echo "[INIT] Neovim plugins installed successfully"
+fi
+
+# Install tmux plugins using TPM
+echo "[INIT] Installing tmux plugins..."
+# Ensure TPM is present (it should be from Dockerfile, but check in case volume is empty)
+if [ ! -d "/home/devvy/.tmux/plugins/tpm" ]; then
+    echo "[INIT] Installing TPM..."
+    su - devvy -c "git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm" || echo "Warning: Could not install TPM"
+fi
+
+# Install tmux plugins non-interactively
+if [ -d "/home/devvy/.tmux/plugins/tpm" ]; then
+    echo "[INIT] Running TPM plugin installation..."
+    # The install_plugins script can run without tmux being active
+    su - devvy -c "~/.tmux/plugins/tpm/bin/install_plugins" || echo "Warning: Some tmux plugins may not have installed correctly"
+    echo "[INIT] Tmux plugins installation completed"
 fi
 
 # Install VS Code/Cursor extensions from extensions.txt

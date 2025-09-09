@@ -98,7 +98,14 @@ RUN mkdir -p ~/.ssh ~/.config ~/.claude && \
     chmod 700 ~/.ssh
 
 # Copy the template .zshrc configuration
-COPY --chown=devvy:devvy templates/zsh/.zshrc /home/devvy/.zshrc
+COPY --chown=${HOST_UID}:${HOST_GID} templates/zsh/.zshrc /home/devvy/.zshrc
+
+# Copy the template tmux configuration
+COPY --chown=${HOST_UID}:${HOST_GID} templates/tmux/tmux.conf /home/devvy/.tmux.conf
+
+# Install TPM (Tmux Plugin Manager) for the devvy user
+RUN git clone https://github.com/tmux-plugins/tpm /home/devvy/.tmux/plugins/tpm && \
+    chown -R ${HOST_UID}:${HOST_GID} /home/devvy/.tmux
 
 # Setup SSH for GitHub (will be populated by entrypoint)
 RUN touch ~/.ssh/known_hosts && \

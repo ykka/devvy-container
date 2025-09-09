@@ -30,12 +30,6 @@ services:
         target: /home/devvy/.config/nvim
         read_only: true
 
-      # Tmux config (conditional, read-only)
-      - type: bind
-        source: ${TMUX_CONFIG_PATH:-${HOME}/.config/tmux}
-        target: /home/devvy/.config/tmux
-        read_only: true
-
       # Claude config including MCP settings
       - type: bind
         source: ${HOME}/.claude
@@ -75,6 +69,8 @@ services:
       # VS Code Server persistence (extensions, settings, etc.)
       - vscode-server:/home/devvy/.vscode-server
       - vscode-server-insiders:/home/devvy/.vscode-server-insiders
+      # Tmux plugin persistence
+      - tmux-plugins:/home/devvy/.tmux/plugins
 
       # X11 socket for GUI forwarding (macOS)
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
@@ -103,4 +99,5 @@ volumes:
   claude-code-data:
   vscode-server:
   vscode-server-insiders:
+  tmux-plugins:
 

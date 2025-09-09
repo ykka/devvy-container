@@ -1,3 +1,6 @@
+# Path to your oh-my-zsh installation
+export ZSH="$HOME/.oh-my-zsh"
+
 # ZSH Config
 ZSH_THEME="robbyrussell"
 
@@ -17,6 +20,9 @@ if [[ -f /.dockerenv ]] || [[ -n "$DEVCONTAINER" ]] || grep -q 'docker\|lxc' /pr
     # You can customize the indicator here (change "devvy" to whatever you prefer)
     PROMPT="%{$fg_bold[cyan]%}(claude-devvy-container)%{$reset_color%} $PROMPT"
 fi
+
+# Add npm global packages to PATH
+export PATH="$HOME/.npm-global/bin:$PATH"
 
 # Aliases
 alias zshconfig="nvim ~/.zshrc"
