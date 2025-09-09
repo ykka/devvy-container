@@ -75,22 +75,6 @@ export async function getContainerInfo(name: string): Promise<ContainerInfo> {
 }
 
 /**
- * Start a container
- */
-export async function startContainer(name: string): Promise<void> {
-  const container = await getContainer(name);
-  const info = await container.inspect();
-
-  if (info.State.Running) {
-    logger.info('Container is already running');
-    return;
-  }
-
-  await container.start();
-  logger.success(`Container ${name} started successfully`);
-}
-
-/**
  * Stop a container
  */
 export async function stopContainer(name: string, force = false): Promise<void> {
@@ -170,31 +154,4 @@ export async function execInContainer(name: string, command: string[]): Promise<
 
     stream.on('error', reject);
   });
-}
-
-/**
- * Get container logs
- */
-export async function getContainerLogs(name: string, tail?: number): Promise<NodeJS.ReadableStream> {
-  const container = await getContainer(name);
-
-  const stream = container.logs({
-    stdout: true,
-    stderr: true,
-    follow: false,
-    tail: tail || 'all',
-  } as any);
-
-  return stream as any;
-}
-
-/**
- * Prune unused Docker resources
- */
-export async function pruneSystem(): Promise<void> {
-  logger.info('Pruning unused Docker resources...');
-  await docker.pruneContainers();
-  await docker.pruneImages();
-  await docker.pruneVolumes();
-  logger.success('Docker system pruned successfully');
 }

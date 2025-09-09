@@ -1,6 +1,6 @@
 import { CONSTANTS } from '@config/constants';
 import { logger } from '@utils/logger';
-import { type ExecaChildProcess, execa } from 'execa';
+import { execa } from 'execa';
 
 /**
  * Run docker-compose up
@@ -57,31 +57,6 @@ export async function composeDown(removeVolumes = false): Promise<void> {
 }
 
 /**
- * Get docker-compose logs
- */
-export async function composeLogs(follow = false, tail?: number): Promise<ExecaChildProcess> {
-  const command = ['docker', 'compose', '-p', CONSTANTS.DOCKER.PROJECT_NAME, '-f', CONSTANTS.DOCKER.COMPOSE_FILE, 'logs'];
-
-  if (follow) {
-    command.push('-f');
-  }
-
-  if (tail) {
-    command.push('--tail', tail.toString());
-  }
-
-  logger.command(command.join(' '));
-
-  const [cmd, ...args] = command;
-  if (!cmd) throw new Error('Invalid command');
-  const process = execa(cmd, args, {
-    stdio: 'inherit',
-  });
-
-  return process;
-}
-
-/**
  * Build docker-compose services
  */
 export async function composeBuild(noCache = false): Promise<void> {
@@ -104,21 +79,4 @@ export async function composeBuild(noCache = false): Promise<void> {
   }
 
   logger.success('Docker image built successfully');
-}
-
-/**
- * Check if a compose service is running
- */
-export async function isServiceRunning(service: string): Promise<boolean> {
-  try {
-    const command = ['docker', 'compose', '-p', CONSTANTS.DOCKER.PROJECT_NAME, '-f', CONSTANTS.DOCKER.COMPOSE_FILE, 'ps'];
-
-    const [cmd, ...args] = command;
-    if (!cmd) throw new Error('Invalid command');
-    const result = await execa(cmd, args);
-
-    return result.stdout.includes(service) && result.stdout.includes('Up');
-  } catch {
-    return false;
-  }
 }

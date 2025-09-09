@@ -87,7 +87,7 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
     if (containerInfo.state === 'running') {
       logger.info('');
       logger.info(`Connect with: ${chalk.cyan('devvy connect')}`);
-      logger.info(`Or use SSH: ${chalk.cyan(`ssh -p ${CONSTANTS.SSH.PORT} ${CONSTANTS.CONTAINER_USER.NAME}@localhost`)}`);
+      logger.info(`Or use SSH: ${chalk.cyan(`ssh -p ${CONSTANTS.SSH.PORT} ${CONSTANTS.CONTAINER_USER_NAME}@localhost`)}`);
     } else {
       logger.info('');
       logger.info(`Start the container with: ${chalk.cyan('devvy start')}`);

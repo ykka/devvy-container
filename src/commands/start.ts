@@ -52,7 +52,7 @@ export async function startCommand(options: StartOptions): Promise<void> {
       spinner.complete();
       logger.info('Container is already running');
 
-      logger.info(`SSH: ssh -p ${CONSTANTS.SSH.PORT} ${CONSTANTS.CONTAINER_USER.NAME}@localhost`);
+      logger.info(`SSH: ssh -p ${CONSTANTS.SSH.PORT} ${CONSTANTS.CONTAINER_USER_NAME}@localhost`);
       return;
     }
     spinner.next();
@@ -84,7 +84,7 @@ export async function startCommand(options: StartOptions): Promise<void> {
     logger.success('Container started successfully');
 
     logger.info(`\nConnect with: ${chalk.cyan(`devvy connect`)}`);
-    logger.info(`Or use SSH: ${chalk.cyan(`ssh -p ${CONSTANTS.SSH.PORT} ${CONSTANTS.CONTAINER_USER.NAME}@localhost`)}`);
+    logger.info(`Or use SSH: ${chalk.cyan(`ssh -p ${CONSTANTS.SSH.PORT} ${CONSTANTS.CONTAINER_USER_NAME}@localhost`)}`);
   } catch (error) {
     logger.error('Failed to start container', error);
     process.exit(1);

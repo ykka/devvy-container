@@ -1,5 +1,4 @@
 export const CONSTANTS = {
-  APP_NAME: 'devvy-cli',
   VERSION: '1.0.0',
 
   // Docker configuration
@@ -9,11 +8,8 @@ export const CONSTANTS = {
     CONTAINER_NAME: 'claude-devvy-container',
   },
 
-  // User and paths inside container
-  CONTAINER_USER: {
-    NAME: 'devvy',
-    REPOS_PATH: '/home/devvy/repos',
-  },
+  // Container user
+  CONTAINER_USER_NAME: 'devvy',
 
   // SSH configuration
   SSH: {

@@ -126,24 +126,6 @@ export async function updateContainerKeyForRebuild(host = 'localhost', port = CO
 }
 
 /**
- * Copy host's public SSH key to container
- */
-export async function copyPublicSSHKeyToContainer(containerName: string): Promise<void> {
-  await generateHostSSHKey(); // This creates the authorized_keys file in secrets dir
-
-  const authorizedKeysPath = path.join(secretsDir, 'authorized_keys');
-
-  // Copy authorized_keys file to container
-  await execAsync('docker', ['cp', authorizedKeysPath, `${containerName}:/home/devvy/.ssh/authorized_keys`]);
-
-  // Set proper ownership and permissions
-  await execAsync('docker', ['exec', containerName, 'chown', 'devvy:devvy', '/home/devvy/.ssh/authorized_keys']);
-  await execAsync('docker', ['exec', containerName, 'chmod', '600', '/home/devvy/.ssh/authorized_keys']);
-
-  logger.debug("Host SSH public key copied to container's authorized_keys");
-}
-
-/**
  * Clean up host's SSH keys
  */
 export async function cleanupHostSSHKeys(): Promise<void> {
@@ -169,32 +151,9 @@ export function getSSHConfig(): {
   const keyPath = path.join(secretsDir, CONSTANTS.SSH.KEY_NAME);
 
   return {
-    user: CONSTANTS.CONTAINER_USER.NAME,
+    user: CONSTANTS.CONTAINER_USER_NAME,
     host: 'localhost',
     port: CONSTANTS.SSH.PORT,
     keyPath,
   };
-}
-
-/**
- * Test SSH connection to container
- */
-export async function testSSHConnection(): Promise<boolean> {
-  try {
-    const config = getSSHConfig();
-    const { stderr } = await execAsync('ssh', [
-      '-o',
-      'ConnectTimeout=5',
-      '-o',
-      'StrictHostKeyChecking=no',
-      '-p',
-      config.port.toString(),
-      `${config.user}@${config.host}`,
-      'echo test',
-    ]);
-
-    return !stderr || stderr.length === 0;
-  } catch {
-    return false;
-  }
 }

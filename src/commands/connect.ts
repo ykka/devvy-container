@@ -49,14 +49,14 @@ export async function connectCommand(options: ConnectOptions): Promise<void> {
 
     if (options.mosh) {
       command = 'mosh';
-      args = ['--ssh', `ssh -p ${CONSTANTS.SSH.PORT} -i ${sshKeyPath}`, `${CONSTANTS.CONTAINER_USER.NAME}@localhost`];
+      args = ['--ssh', `ssh -p ${CONSTANTS.SSH.PORT} -i ${sshKeyPath}`, `${CONSTANTS.CONTAINER_USER_NAME}@localhost`];
 
       if (options.tmux) {
         args.push('--', 'tmux', 'new-session', '-A', '-s', 'main');
       }
     } else {
       command = 'ssh';
-      args = ['-p', String(CONSTANTS.SSH.PORT), '-i', sshKeyPath, `${CONSTANTS.CONTAINER_USER.NAME}@localhost`];
+      args = ['-p', String(CONSTANTS.SSH.PORT), '-i', sshKeyPath, `${CONSTANTS.CONTAINER_USER_NAME}@localhost`];
 
       if (options.tmux) {
         args.push('-t', 'tmux new-session -A -s main');

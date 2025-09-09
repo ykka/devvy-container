@@ -11,12 +11,12 @@ import { z } from 'zod';
 
 export const envSchema = z.object({
   // User Configuration for runtime UID/GID matching
-  HOST_UID: z.string().regex(/^\d+$/).default('1000'),
-  HOST_GID: z.string().regex(/^\d+$/).default('1000'),
+  HOST_UID: z.string().regex(/^\d+$/),
+  HOST_GID: z.string().regex(/^\d+$/),
 
   // Git Configuration
-  GIT_USER_NAME: z.string().default('Your Name'),
-  GIT_USER_EMAIL: z.string().email().or(z.string()).default('your.email@example.com'),
+  GIT_USER_NAME: z.string(),
+  GIT_USER_EMAIL: z.string().email().or(z.string()),
 
   // Paths
   PROJECTS_PATH: z.string(),
@@ -27,12 +27,11 @@ export const envSchema = z.object({
   GITHUB_TOKEN: z.string().optional(),
   LINEAR_API_KEY: z.string().optional(),
 
-  // Docker/System
-  DOCKER_HOST: z.string().optional(),
-  LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
+  // System
+  LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']),
 
   // LazyVim
-  INSTALL_LAZYVIM: z.enum(['true', 'false']).default('false'),
+  INSTALL_LAZYVIM: z.enum(['true', 'false']),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
@@ -49,19 +48,11 @@ export function loadEnvConfig(): EnvConfig {
     return envSchema.parse(process.env);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logger.debug('Environment configuration validation:', { errors: error.errors });
-      // Use defaults for missing values
-      return envSchema.parse({});
+      logger.error('Environment configuration validation failed:', { errors: error.errors });
+      throw new Error(`Missing required environment variables: ${error.errors.map((e) => e.path.join('.')).join(', ')}`);
     }
     throw error;
   }
-}
-
-/**
- * Get current env config (alias for loadEnvConfig)
- */
-export function getEnvConfig(): EnvConfig {
-  return loadEnvConfig();
 }
 
 /**
@@ -95,6 +86,12 @@ export async function generateEnvFile(config: UserConfig): Promise<void> {
     '',
     '# Projects directory',
     `PROJECTS_PATH=${config.projectsPath}`,
+    '',
+    '# System',
+    `LOG_LEVEL=info`,
+    '',
+    '# LazyVim installation',
+    `INSTALL_LAZYVIM=${config.editor.lazyvim?.enabled === true ? 'true' : 'false'}`,
     '',
   ];
 

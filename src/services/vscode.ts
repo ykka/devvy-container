@@ -122,10 +122,3 @@ export async function importEditorSettings(editorType: EditorType): Promise<void
 
   logger.info(`Synced from ${config.name} to project`);
 }
-
-/**
- * Get project config path
- */
-export function getProjectConfigPath(): string {
-  return projectConfigDir;
-}

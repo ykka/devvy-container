@@ -7,7 +7,6 @@ export {
   type EnvConfig,
   envSchema,
   generateEnvFile,
-  getEnvConfig,
   loadEnvConfig,
   validateEnvironment,
 } from './environment';

@@ -15,23 +15,6 @@ export function expandPath(filePath: string): string {
 }
 
 /**
- * Normalize and expand a path
- */
-export function normalizePath(filePath: string): string {
-  return path.normalize(expandPath(filePath));
-}
-
-/**
- * Get absolute path from relative path
- * @param relativePath - Path relative to current working directory
- * @param basePath - Optional base path (defaults to process.cwd())
- */
-export function getAbsolutePath(relativePath: string, basePath?: string): string {
-  const base = basePath || process.cwd();
-  return path.isAbsolute(relativePath) ? relativePath : path.join(base, relativePath);
-}
-
-/**
  * Get project root directory
  */
 export function getProjectRoot(): string {

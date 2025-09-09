@@ -43,10 +43,6 @@ export async function exec(command: string, args: string[] = [], options: Option
   }
 }
 
-export async function execSilent(command: string, args: string[] = []): Promise<ShellResult> {
-  return exec(command, args, { stdio: 'pipe' });
-}
-
 export async function run(command: string, options: ShellOptions = {}): Promise<CommandResult> {
   const { silent = false, throwOnError = false, ...execaOptions } = options;
 
@@ -109,12 +105,8 @@ export async function which(command: string): Promise<string | null> {
   }
 }
 
-export function isCommandAvailable(command: string): Promise<boolean> {
-  return which(command).then((path) => path !== null);
-}
-
 export async function commandExists(command: string): Promise<boolean> {
-  return isCommandAvailable(command);
+  return which(command).then((path) => path !== null);
 }
 
 export async function execInteractive(command: string, args: string[] = [], options: Options = {}): Promise<number> {
