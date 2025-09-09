@@ -85,46 +85,104 @@ export async function detectEditor(): Promise<EditorType | null> {
 export async function importEditorSettings(editorType: EditorType): Promise<void> {
   const config = getEditorPaths(editorType);
 
-  logger.info(`Synced ${config.name} settings from local machine (host) to vscode-config folder for container mounting`);
+  logger.info(`Importing ${config.name} settings from local machine to vscode-config folder...`);
 
   // Ensure project config directory exists
   await fs.ensureDir(projectConfigDir);
 
+  let filesImported = 0;
+  const errors: string[] = [];
+
   // Import settings.json
   if (await fs.pathExists(config.settingsPath)) {
-    const settings = await fs.readJson(config.settingsPath);
-    await fs.writeJson(path.join(projectConfigDir, 'settings.json'), settings, { spaces: 2 });
-    logger.debug('Imported settings.json');
+    try {
+      const settingsContent = await fs.readFile(config.settingsPath, 'utf-8');
+      const targetPath = path.join(projectConfigDir, 'settings.json');
+      await fs.writeFile(targetPath, settingsContent);
+
+      // Verify the file was written correctly
+      const writtenContent = await fs.readFile(targetPath, 'utf-8');
+      if (writtenContent.length > 0) {
+        logger.debug(`Imported settings.json (${writtenContent.length} bytes)`);
+        filesImported++;
+      } else {
+        errors.push('settings.json was empty after copy');
+      }
+    } catch (error) {
+      errors.push(`Failed to import settings.json: ${error}`);
+      logger.debug('Settings import error:', error as Record<string, unknown>);
+    }
+  } else {
+    logger.debug(`Settings file not found at: ${config.settingsPath}`);
   }
 
   // Import keybindings.json
   if (await fs.pathExists(config.keybindingsPath)) {
-    const keybindings = await fs.readJson(config.keybindingsPath);
-    await fs.writeJson(path.join(projectConfigDir, 'keybindings.json'), keybindings, { spaces: 2 });
-    logger.debug('Imported keybindings.json');
+    try {
+      const keybindingsContent = await fs.readFile(config.keybindingsPath, 'utf-8');
+      const targetPath = path.join(projectConfigDir, 'keybindings.json');
+      await fs.writeFile(targetPath, keybindingsContent);
+
+      // Verify the file was written correctly
+      const writtenContent = await fs.readFile(targetPath, 'utf-8');
+      if (writtenContent.length > 0) {
+        logger.debug(`Imported keybindings.json (${writtenContent.length} bytes)`);
+        filesImported++;
+      } else {
+        errors.push('keybindings.json was empty after copy');
+      }
+    } catch (error) {
+      errors.push(`Failed to import keybindings.json: ${error}`);
+      logger.debug('Keybindings import error:', error as Record<string, unknown>);
+    }
+  } else {
+    logger.debug(`Keybindings file not found at: ${config.keybindingsPath}`);
   }
 
   // Import extensions list
   try {
     const { stdout } = await run(`${config.commandName} --list-extensions`);
 
-    if (stdout) {
+    if (stdout?.trim()) {
       const extensions = stdout.trim().split('\n').filter(Boolean);
       const extensionsPath = path.join(projectConfigDir, 'extensions.txt');
       await fs.writeFile(extensionsPath, extensions.join('\n'));
       logger.debug(`Imported ${extensions.length} extensions`);
+      filesImported++;
+    } else {
+      errors.push('No extensions found or command failed');
     }
   } catch (error) {
+    errors.push(`Failed to fetch extensions: ${error}`);
     logger.debug('Extension fetch error:', error as Record<string, unknown>);
   }
 
   // Import snippets
   if (await fs.pathExists(config.snippetsPath)) {
-    const snippetsDir = path.join(projectConfigDir, 'snippets');
-    await fs.ensureDir(snippetsDir);
-    await fs.copy(config.snippetsPath, snippetsDir, { overwrite: true });
-    logger.debug('Imported user snippets');
+    try {
+      const snippetsDir = path.join(projectConfigDir, 'snippets');
+      await fs.ensureDir(snippetsDir);
+      await fs.copy(config.snippetsPath, snippetsDir, { overwrite: true });
+      logger.debug('Imported user snippets');
+      filesImported++;
+    } catch (error) {
+      errors.push(`Failed to import snippets: ${error}`);
+      logger.debug('Snippets import error:', error as Record<string, unknown>);
+    }
+  } else {
+    logger.debug(`Snippets directory not found at: ${config.snippetsPath}`);
   }
 
-  logger.info(`Successfully synced ${config.name} configuration from host to vscode-config folder (mounted into container)`);
+  if (filesImported > 0) {
+    logger.success(`✓ Successfully imported ${filesImported} ${config.name} configuration files`);
+  } else {
+    logger.warn(`⚠️ No ${config.name} configuration files were imported`);
+  }
+
+  if (errors.length > 0) {
+    logger.warn('Some files could not be imported:');
+    for (const error of errors) {
+      logger.warn(`  • ${error}`);
+    }
+  }
 }

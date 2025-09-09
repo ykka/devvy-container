@@ -1,3 +1,4 @@
+import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { CONSTANTS } from '@config/constants';
@@ -105,38 +106,60 @@ async function generateSSHKeys(_projectRoot: string): Promise<void> {
 }
 
 async function setupVSCodeSync(projectRoot: string): Promise<void> {
-  // Detect installed editor
-  const editorType = await vscode.detectEditor();
-
-  if (!editorType) {
-    return; // Skip silently if no editor found
-  }
-
-  const editorName = editorType === 'cursor' ? 'Cursor' : 'VS Code';
-
   // Check if settings already exist
   const vscodeConfigDir = path.join(projectRoot, CONSTANTS.HOST_PATHS.VSCODE_CONFIG_DIR);
   const settingsExist = await fs.pathExists(path.join(vscodeConfigDir, 'settings.json'));
 
   if (settingsExist) {
-    const overwrite = await prompt.confirm(`Overwrite existing ${editorName} settings with your current configuration?`, false);
-
-    if (!overwrite) {
-      return;
+    // Check if the existing settings file has content
+    const existingSettings = await fs.readFile(path.join(vscodeConfigDir, 'settings.json'), 'utf-8');
+    if (existingSettings.trim() && existingSettings.trim() !== '{}') {
+      const overwrite = await prompt.confirm('Overwrite existing editor settings with your current configuration?', false);
+      if (!overwrite) {
+        return;
+      }
     }
   } else {
-    const syncEditor = await prompt.confirm(`Import ${editorName} settings to the project?`, true);
-
+    const syncEditor = await prompt.confirm('Import editor settings to the project for container use?', true);
     if (!syncEditor) {
       return;
     }
   }
 
+  // Detect available editors
+  const cursorInstalled = (await vscode.detectEditor()) === 'cursor';
+  const vscodeInstalled = await fs.pathExists(
+    process.platform === 'darwin'
+      ? path.join(os.homedir(), 'Library', 'Application Support', 'Code')
+      : process.platform === 'win32'
+        ? path.join(os.homedir(), 'AppData', 'Roaming', 'Code')
+        : path.join(os.homedir(), '.config', 'Code'),
+  );
+
+  let editorType: vscode.EditorType | null = null;
+
+  if (cursorInstalled && vscodeInstalled) {
+    // Both editors are installed, ask user to choose
+    const choice = await prompt.select('Which editor settings would you like to import?', [
+      { name: 'Cursor - Import Cursor settings and extensions', value: 'cursor' },
+      { name: 'VS Code - Import VS Code settings and extensions', value: 'vscode' },
+    ]);
+    editorType = choice as vscode.EditorType;
+  } else if (cursorInstalled) {
+    editorType = 'cursor';
+  } else if (vscodeInstalled) {
+    editorType = 'vscode';
+  } else {
+    logger.info('No VS Code or Cursor installation detected, skipping editor sync');
+    return;
+  }
+
+  const editorName = editorType === 'cursor' ? 'Cursor' : 'VS Code';
+
   try {
     await vscode.importEditorSettings(editorType);
-    logger.success(`${editorName} settings imported`);
   } catch (error) {
-    logger.debug('Import error:', error as Record<string, unknown>);
+    logger.error(`Failed to import ${editorName} settings`, error);
   }
 }
 
