@@ -121,7 +121,7 @@ ${chalk.gray('Examples:')}
   $ devvy status          ${chalk.gray('# Show container status')}
   $ devvy logs -f         ${chalk.gray('# Follow container logs')}
 
-${chalk.gray('For more information, visit:')} ${chalk.blue('https://github.com/ykka/devvy')}
+${chalk.gray('For more information, visit:')} ${chalk.blue('https://github.com/ykka/clade-devvy-container')}
 `,
 );
 

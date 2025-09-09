@@ -62,8 +62,16 @@ export async function generateEnvFile(config: UserConfig): Promise<void> {
   // Get host user/group IDs
   const userIdResult = await exec('id', ['-u']);
   const groupIdResult = await exec('id', ['-g']);
-  const hostUid = userIdResult.success ? userIdResult.stdout.trim() : '1000';
-  const hostGid = groupIdResult.success ? groupIdResult.stdout.trim() : '1000';
+
+  if (!userIdResult.success) {
+    throw new Error(`Failed to get user ID: ${userIdResult.stderr || 'Unknown error'}`);
+  }
+  if (!groupIdResult.success) {
+    throw new Error(`Failed to get group ID: ${groupIdResult.stderr || 'Unknown error'}`);
+  }
+
+  const hostUid = userIdResult.stdout.trim();
+  const hostGid = groupIdResult.stdout.trim();
 
   // Get git config from system
   const gitNameResult = await exec('git', ['config', '--global', 'user.name']);

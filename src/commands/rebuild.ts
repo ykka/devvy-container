@@ -1,5 +1,4 @@
 import { CONSTANTS } from '@config/constants';
-import * as compose from '@services/compose';
 import * as docker from '@services/docker';
 import * as ssh from '@services/ssh';
 import { logger } from '@utils/logger';
@@ -48,7 +47,7 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
     logger.info('\n📦 Building new container image...\n');
 
     try {
-      await compose.composeBuild(options.noCache || false);
+      await docker.composeBuild(options.noCache || false);
     } catch {
       logger.error('Failed to build container image');
       process.exit(1);
@@ -61,7 +60,7 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
     startSpinner.start();
 
     try {
-      await compose.composeUp(true, false);
+      await docker.composeUp(true, false);
     } catch {
       startSpinner.fail('Failed to start container');
       process.exit(1);

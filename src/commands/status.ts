@@ -2,7 +2,6 @@ import { CONSTANTS } from '@config/constants';
 import * as docker from '@services/docker';
 import { logger } from '@utils/logger';
 import chalk from 'chalk';
-import Table from 'cli-table3';
 import Docker from 'dockerode';
 
 export interface StatusOptions {
@@ -44,45 +43,55 @@ export async function statusCommand(options: StatusOptions): Promise<void> {
     const statusColor = containerInfo.state === 'running' ? chalk.green : chalk.red;
     const statusText = containerInfo.state.charAt(0).toUpperCase() + containerInfo.state.slice(1);
 
-    const table = new Table({
-      style: { head: ['cyan'] },
-      colWidths: [20, 60],
-    });
+    // Helper function to print formatted info
+    const printInfo = (label: string, value: string) => {
+      const paddedLabel = label.padEnd(18);
+      logger.info(`  ${chalk.gray(paddedLabel)} ${value}`);
+    };
 
-    table.push(['Status', statusColor(`${statusIcon} ${statusText}`)], ['Container Name', containerInfo.name], ['Container ID', containerInfo.id.slice(0, 12)]);
+    logger.info(''); // Empty line for spacing
+    printInfo('Status:', statusColor(`${statusIcon} ${statusText}`));
+    printInfo('Container Name:', containerInfo.name);
+    printInfo('Container ID:', containerInfo.id.slice(0, 12));
 
     if (containerInfo.state === 'running') {
       const ipAddress = await getContainerIP(containerName);
       if (ipAddress) {
-        table.push(['IP Address', ipAddress]);
+        printInfo('IP Address:', ipAddress);
       }
 
-      table.push(['Uptime', getUptime(containerInfo.created)]);
+      printInfo('Uptime:', getUptime(containerInfo.created));
 
       const ports = await getContainerPorts(containerName);
       if (ports.length > 0) {
-        table.push(['Port Mappings', ports.join('\n')]);
+        printInfo('Port Mappings:', ports[0] || '');
+        for (let i = 1; i < ports.length; i++) {
+          printInfo('', ports[i] || '');
+        }
       }
 
       if (options.verbose) {
         const stats = await getContainerStats(containerName);
         if (stats) {
-          table.push(['CPU Usage', stats.cpu], ['Memory Usage', stats.memory], ['Network I/O', stats.network]);
+          printInfo('CPU Usage:', stats.cpu);
+          printInfo('Memory Usage:', stats.memory);
+          printInfo('Network I/O:', stats.network);
         }
 
         const volumes = await getContainerVolumes(containerName);
         if (volumes.length > 0) {
-          table.push(['Volumes', volumes.join('\n')]);
+          printInfo('Volumes:', volumes[0] || '');
+          for (let i = 1; i < volumes.length; i++) {
+            printInfo('', volumes[i] || '');
+          }
         }
       }
     } else {
-      table.push(['Exit Code', containerInfo.exitCode?.toString() || 'N/A']);
+      printInfo('Exit Code:', containerInfo.exitCode?.toString() || 'N/A');
       if (containerInfo.finishedAt) {
-        table.push(['Stopped At', new Date(containerInfo.finishedAt).toLocaleString()]);
+        printInfo('Stopped At:', new Date(containerInfo.finishedAt).toLocaleString());
       }
     }
-
-    process.stdout.write(`${table.toString()}\n`);
 
     if (containerInfo.state === 'running') {
       logger.info('');

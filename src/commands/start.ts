@@ -1,6 +1,5 @@
 import { CONSTANTS } from '@config/constants';
-import * as config from '@config/index';
-import * as compose from '@services/compose';
+import { validateEnvironment } from '@config/environment';
 import * as docker from '@services/docker';
 import * as ssh from '@services/ssh';
 import { logger } from '@utils/logger';
@@ -15,7 +14,7 @@ export interface StartOptions {
 export async function startCommand(options: StartOptions): Promise<void> {
   try {
     // Validate environment before starting
-    const validation = await config.validateEnvironment();
+    const validation = await validateEnvironment();
     if (!validation.valid) {
       logger.error('Environment validation failed:');
       for (const error of validation.errors) {
@@ -61,7 +60,7 @@ export async function startCommand(options: StartOptions): Promise<void> {
     spinner.next();
 
     try {
-      await compose.composeUp(options.detach !== false, options.build || false);
+      await docker.composeUp(options.detach !== false, options.build || false);
     } catch {
       spinner.fail('Failed to start container');
       process.exit(1);

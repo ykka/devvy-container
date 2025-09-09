@@ -1,5 +1,4 @@
 import { CONSTANTS } from '@config/constants';
-import * as compose from '@services/compose';
 import * as docker from '@services/docker';
 import { logger } from '@utils/logger';
 import * as prompt from '@utils/prompt';
@@ -32,7 +31,7 @@ export async function stopCommand(options: StopOptions): Promise<void> {
     spinner.start();
 
     try {
-      await compose.composeDown();
+      await docker.composeDown();
       spinner.succeed('Container stopped successfully');
     } catch {
       try {

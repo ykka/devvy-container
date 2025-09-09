@@ -85,6 +85,8 @@ export async function detectEditor(): Promise<EditorType | null> {
 export async function importEditorSettings(editorType: EditorType): Promise<void> {
   const config = getEditorPaths(editorType);
 
+  logger.info(`Synced ${config.name} settings from local machine (host) to vscode-config folder for container mounting`);
+
   // Ensure project config directory exists
   await fs.ensureDir(projectConfigDir);
 
@@ -92,12 +94,14 @@ export async function importEditorSettings(editorType: EditorType): Promise<void
   if (await fs.pathExists(config.settingsPath)) {
     const settings = await fs.readJson(config.settingsPath);
     await fs.writeJson(path.join(projectConfigDir, 'settings.json'), settings, { spaces: 2 });
+    logger.debug('Imported settings.json');
   }
 
   // Import keybindings.json
   if (await fs.pathExists(config.keybindingsPath)) {
     const keybindings = await fs.readJson(config.keybindingsPath);
     await fs.writeJson(path.join(projectConfigDir, 'keybindings.json'), keybindings, { spaces: 2 });
+    logger.debug('Imported keybindings.json');
   }
 
   // Import extensions list
@@ -108,6 +112,7 @@ export async function importEditorSettings(editorType: EditorType): Promise<void
       const extensions = stdout.trim().split('\n').filter(Boolean);
       const extensionsPath = path.join(projectConfigDir, 'extensions.txt');
       await fs.writeFile(extensionsPath, extensions.join('\n'));
+      logger.debug(`Imported ${extensions.length} extensions`);
     }
   } catch (error) {
     logger.debug('Extension fetch error:', error as Record<string, unknown>);
@@ -118,7 +123,8 @@ export async function importEditorSettings(editorType: EditorType): Promise<void
     const snippetsDir = path.join(projectConfigDir, 'snippets');
     await fs.ensureDir(snippetsDir);
     await fs.copy(config.snippetsPath, snippetsDir, { overwrite: true });
+    logger.debug('Imported user snippets');
   }
 
-  logger.info(`Synced from ${config.name} to project`);
+  logger.info(`Successfully synced ${config.name} configuration from host to vscode-config folder (mounted into container)`);
 }

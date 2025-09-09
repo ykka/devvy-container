@@ -1,7 +1,8 @@
 import * as path from 'node:path';
 
 import { CONSTANTS } from '@config/constants';
-import * as config from '@config/index';
+import { generateEnvFile } from '@config/environment';
+import { loadUserConfig, saveUserConfig, type UserConfig, userConfigExists } from '@config/user-config';
 import * as ssh from '@services/ssh';
 import * as vscode from '@services/vscode';
 import { logger } from '@utils/logger';
@@ -144,25 +145,25 @@ async function setupUserConfig(_projectRoot: string): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 100));
 
   // Check if config already exists
-  let existingConfig: config.UserConfig | null = null;
-  if (await config.userConfigExists()) {
+  let existingConfig: UserConfig | null = null;
+  if (await userConfigExists()) {
     const shouldUpdate = await prompt.confirm('\nUpdate Devvy configuration (projects path, API keys, etc)?', false);
     if (!shouldUpdate) {
       // Still generate .env from existing config
-      const loadedConfig = await config.loadUserConfig();
+      const loadedConfig = await loadUserConfig();
       if (loadedConfig) {
-        await config.generateEnvFile(loadedConfig);
+        await generateEnvFile(loadedConfig);
       }
       return;
     }
-    existingConfig = await config.loadUserConfig();
+    existingConfig = await loadUserConfig();
     logger.info('\nUpdating configuration...\n');
   } else {
     logger.info('\nSetting up configuration...\n');
   }
 
   // Step 1: Projects Directory
-  const defaultProjectsPath = config.getDefaultProjectsPath();
+  const defaultProjectsPath = CONSTANTS.DEFAULT_PATHS.PROJECTS;
   const projectsPath = await prompt.input({
     message: 'Path to your projects folder (will be mounted to /home/devvy/repos):',
     default: existingConfig?.projectsPath || defaultProjectsPath,
@@ -178,7 +179,7 @@ async function setupUserConfig(_projectRoot: string): Promise<void> {
   }
 
   // Step 2: Integrations
-  const integrations: config.UserConfig['integrations'] = {
+  const integrations: UserConfig['integrations'] = {
     github: undefined,
     linear: undefined,
   };
@@ -236,13 +237,13 @@ async function setupUserConfig(_projectRoot: string): Promise<void> {
   // Step 3: LazyVim
 
   // Step 3: LazyVim
-  const editor: config.UserConfig['editor'] = {};
+  const editor: UserConfig['editor'] = {};
   const installLazyvim = await prompt.confirm('Would you like to install LazyVim in the container?', existingConfig?.editor?.lazyvim?.enabled ?? true);
 
   if (installLazyvim) {
     const useExistingConfig = await prompt.confirm('Use your existing Neovim configuration?', true);
     if (useExistingConfig) {
-      const defaultPath = config.getDefaultLazyvimPath();
+      const defaultPath = CONSTANTS.DEFAULT_PATHS.LAZYVIM_CONFIG;
       const configPath = await prompt.input({
         message: 'Path to your Neovim config directory:',
         default: existingConfig?.editor?.lazyvim?.readOnlyConfigPath || defaultPath,
@@ -272,11 +273,11 @@ async function setupUserConfig(_projectRoot: string): Promise<void> {
   }
 
   // Step 4: Tmux
-  const terminal: config.UserConfig['terminal'] = {};
+  const terminal: UserConfig['terminal'] = {};
   const useTmux = await prompt.confirm('Would you like to use your existing tmux configuration?', !!existingConfig?.terminal?.tmux?.readOnlyConfigPath);
 
   if (useTmux) {
-    const defaultPath = config.getDefaultTmuxPath();
+    const defaultPath = CONSTANTS.DEFAULT_PATHS.TMUX_CONFIG;
     const configPath = await prompt.input({
       message: 'Path to your tmux config directory:',
       default: existingConfig?.terminal?.tmux?.readOnlyConfigPath || defaultPath,
@@ -293,8 +294,8 @@ async function setupUserConfig(_projectRoot: string): Promise<void> {
   }
 
   // Build final configuration - merge with existing config or defaults
-  const existingFullConfig = await config.loadUserConfig();
-  const userConfig: config.UserConfig = {
+  const existingFullConfig = await loadUserConfig();
+  const userConfig: UserConfig = {
     projectsPath,
     integrations,
     editor,
@@ -307,8 +308,8 @@ async function setupUserConfig(_projectRoot: string): Promise<void> {
   spinner.start();
 
   try {
-    await config.saveUserConfig(userConfig);
-    await config.generateEnvFile(userConfig);
+    await saveUserConfig(userConfig);
+    await generateEnvFile(userConfig);
     spinner.succeed('Configuration saved successfully');
 
     // Update .gitignore to exclude the config file
