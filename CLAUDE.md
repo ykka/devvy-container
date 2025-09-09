@@ -98,6 +98,47 @@ Tests use Vitest's API with TypeScript:
 import { describe, it, expect, vi } from 'vitest';
 ```
 
+### Mocking Patterns
+**IMPORTANT**: Follow these patterns when mocking in tests:
+
+1. **Module Mocking**: Use `vi.mock()` at the top level with factory functions:
+```typescript
+// Mock modules - vi.mock is hoisted, so we define mocks inside factory functions
+vi.mock('fs-extra', () => ({
+  pathExists: vi.fn(),
+  writeFile: vi.fn(),
+  // ... other functions
+}));
+```
+
+2. **Import Order and Mock References**:
+```typescript
+// Import order matters:
+// 1. First, import non-mocked modules
+import { logger } from '@utils/logger';
+import * as shell from '@utils/shell';
+// 2. Then import mocked modules AFTER vi.mock
+import * as fs from 'fs-extra';
+
+// 3. Create mock references using 'as any' for simplicity
+const mockPathExists = fs.pathExists as any;
+const mockWriteFile = fs.writeFile as any;
+const mockRun = shell.run as any;
+```
+
+3. **Mock Return Values**: Use the typed references in tests:
+```typescript
+// For simple return values
+mockPathExists.mockResolvedValue(true);
+
+// For conditional returns based on arguments
+mockPathExists.mockImplementation(async (path: string) => {
+  return path === '/some/specific/path';
+});
+```
+
+**Never** use inline type assertions repeatedly - define them once at the top.
+
 Before committing, always run:
 ```bash
 npm run quality     # Typecheck and lint
