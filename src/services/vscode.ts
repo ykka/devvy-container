@@ -7,8 +7,50 @@ import * as fs from 'fs-extra';
 
 export type EditorType = 'vscode' | 'cursor';
 
+export interface AttachedContainerConfig {
+  workspaceFolder?: string;
+  remoteUser?: string;
+  settings?: Record<string, unknown>;
+  extensions?: string[];
+  forwardPorts?: number[];
+  remoteEnv?: Record<string, string>;
+  postAttachCommand?: string | string[];
+  customizations?: {
+    vscode?: {
+      settings?: Record<string, unknown>;
+      extensions?: string[];
+    };
+  };
+}
+
 // Module-level constants
 const projectConfigDir = path.join(process.cwd(), 'vscode-config');
+
+/**
+ * Get the path to VS Code's attached container configuration
+ */
+function getAttachedContainerConfigPath(editorType: EditorType): string {
+  const homeDir = os.homedir();
+  const platform = process.platform;
+  const configFilename = 'claude-devvy-container-devcontainer.json';
+
+  const globalStorageDir =
+    editorType === 'cursor'
+      ? platform === 'darwin'
+        ? path.join(homeDir, 'Library', 'Application Support', 'Cursor', 'User', 'globalStorage')
+        : platform === 'win32'
+          ? path.join(homeDir, 'AppData', 'Roaming', 'Cursor', 'User', 'globalStorage')
+          : path.join(homeDir, '.config', 'Cursor', 'User', 'globalStorage')
+      : platform === 'darwin'
+        ? path.join(homeDir, 'Library', 'Application Support', 'Code', 'User', 'globalStorage')
+        : platform === 'win32'
+          ? path.join(homeDir, 'AppData', 'Roaming', 'Code', 'User', 'globalStorage')
+          : path.join(homeDir, '.config', 'Code', 'User', 'globalStorage');
+
+  // For Cursor, use anysphere.remote-containers, for VS Code use ms-vscode-remote.remote-containers
+  const extensionId = editorType === 'cursor' ? 'anysphere.remote-containers' : 'ms-vscode-remote.remote-containers';
+  return path.join(globalStorageDir, extensionId, 'imageConfigs', configFilename);
+}
 
 /**
  * Get editor configuration paths
@@ -76,6 +118,78 @@ export async function detectEditor(): Promise<EditorType | null> {
   }
 
   logger.debug('No VS Code or Cursor installation detected');
+  return null;
+}
+
+/**
+ * Prepare attached container configuration from template and extensions
+ */
+async function prepareAttachedContainerConfig(): Promise<AttachedContainerConfig> {
+  const templatePath = path.join(process.cwd(), 'templates', 'devcontainer', 'claude-devvy-container-devcontainer.json');
+  const extensionsPath = path.join(projectConfigDir, 'extensions.txt');
+
+  // Read the template
+  const template = await fs.readJson(templatePath);
+
+  // Read extensions if available
+  if (await fs.pathExists(extensionsPath)) {
+    const extensionsContent = await fs.readFile(extensionsPath, 'utf-8');
+    const extensions = extensionsContent.trim().split('\n').filter(Boolean);
+
+    // Update the extensions in the template
+    if (template.customizations?.vscode) {
+      template.customizations.vscode.extensions = extensions;
+    }
+
+    logger.debug(`Loaded ${extensions.length} extensions from extensions.txt`);
+  } else {
+    logger.debug('No extensions.txt found, using empty extensions array');
+  }
+
+  return template;
+}
+
+/**
+ * Create or update attached container configuration
+ */
+export async function createAttachedContainerConfig(editorType: EditorType): Promise<{ path: string; extensionCount: number }> {
+  const configPath = getAttachedContainerConfigPath(editorType);
+  const configDir = path.dirname(configPath);
+
+  logger.debug(`Creating attached container config at: ${configPath}`);
+
+  // Ensure the directory exists
+  await fs.ensureDir(configDir);
+
+  // Prepare the configuration from template and extensions
+  const config = await prepareAttachedContainerConfig();
+
+  // Write the configuration
+  await fs.writeJson(configPath, config, { spaces: 2 });
+
+  logger.debug('Attached container configuration created successfully');
+
+  const extensionCount = config.customizations?.vscode?.extensions?.length || 0;
+  return { path: configPath, extensionCount };
+}
+
+/**
+ * Read existing attached container configuration
+ */
+export async function readAttachedContainerConfig(editorType: EditorType): Promise<AttachedContainerConfig | null> {
+  const configPath = getAttachedContainerConfigPath(editorType);
+
+  if (await fs.pathExists(configPath)) {
+    try {
+      const config = await fs.readJson(configPath);
+      logger.debug('Found existing attached container configuration');
+      return config;
+    } catch (error) {
+      logger.debug('Failed to read attached container config:', error as Record<string, unknown>);
+      return null;
+    }
+  }
+
   return null;
 }
 

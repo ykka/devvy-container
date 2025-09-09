@@ -7,6 +7,7 @@ import { startCommand } from '@commands/start';
 import { statusCommand } from '@commands/status';
 import { stopCommand } from '@commands/stop';
 import { syncCommand } from '@commands/sync';
+import { cursorCommand, vscodeCommand } from '@commands/vscode';
 import { CONSTANTS } from '@config/constants';
 import { logger } from '@utils/logger';
 import chalk from 'chalk';
@@ -109,6 +110,23 @@ program
   .option('--editor <type>', 'Specify editor (vscode or cursor)')
   .action(async (options) => {
     await syncCommand(options);
+  });
+
+program
+  .command('cursor')
+  .description('Launch Cursor and attach to the container as devvy user')
+  .option('-f, --folder <path>', 'Folder to open in the container (default: /home/devvy)')
+  .action(async (options) => {
+    await cursorCommand(options);
+  });
+
+program
+  .command('vscode')
+  .alias('code')
+  .description('Launch VS Code and attach to the container as devvy user')
+  .option('-f, --folder <path>', 'Folder to open in the container (default: /home/devvy)')
+  .action(async (options) => {
+    await vscodeCommand(options);
   });
 
 program.addHelpText(

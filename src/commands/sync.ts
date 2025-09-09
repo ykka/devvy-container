@@ -60,15 +60,18 @@ export async function syncCommand(options: SyncOptions): Promise<void> {
     try {
       await vscode.importEditorSettings(editorType);
 
-      spinner.succeed(`Successfully imported ${editorName} settings to claude-devvy-container project for use inside the container`);
+      spinner.succeed(`Successfully imported ${editorName} settings to claude-devvy-container project`);
 
       // Show what was synced
       logger.info('');
-      logger.info('Synced items to vscode-config/ for container use:');
+      logger.info('Synced items to vscode-config/:');
       logger.step('settings.json - Editor preferences');
       logger.step('keybindings.json - Keyboard shortcuts');
-      logger.step('extensions.txt - Extension list');
+      logger.step('extensions.txt - Extension list (will be used when connecting to container)');
       logger.step('snippets/ - Code snippets');
+
+      logger.info('');
+      logger.info(`Run 'devvy ${editorType}' to connect ${editorName} to the container with these settings.`);
     } catch (error) {
       spinner.fail(`Failed to sync ${editorName} settings`);
       throw error;

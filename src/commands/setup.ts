@@ -32,6 +32,9 @@ export async function setupCommand(): Promise<void> {
     logger.step(`1. Build the container: ${chalk.cyan('devvy rebuild')}`);
     logger.step(`2. Start the container: ${chalk.cyan('devvy start')}`);
     logger.step(`3. Connect to it: ${chalk.cyan('devvy connect')}`);
+    logger.info('\nYou can also connect with your editor:');
+    logger.step(`• ${chalk.cyan('devvy cursor')} - Connect with Cursor`);
+    logger.step(`• ${chalk.cyan('devvy vscode')} - Connect with VS Code`);
     logger.step(`4. Start coding! 🚀`);
   } catch (error) {
     logger.error('Setup failed', error);

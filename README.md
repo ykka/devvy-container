@@ -44,19 +44,44 @@ devvy setup      # Initial setup wizard
 devvy start      # Start container
 devvy stop       # Stop container
 devvy connect    # SSH into container
+devvy cursor     # Launch Cursor attached to container (as devvy user)
+devvy vscode     # Launch VS Code attached to container (as devvy user)
 devvy status     # Check container status
 devvy logs       # View container logs
 devvy rebuild    # Rebuild container (preserves data)
-devvy sync       # Sync files to container
+devvy sync       # Sync VS Code/Cursor settings to container
 devvy cleanup    # Clean up Docker resources
 ```
 
 ## Connecting VS Code/Cursor
 
+### Automatic Connection (Recommended)
+
+```bash
+# Launch Cursor and automatically attach as 'devvy' user
+devvy cursor
+
+# Launch VS Code and automatically attach as 'devvy' user
+devvy vscode
+
+# Open a specific folder
+devvy cursor --folder /home/devvy/projects
+devvy vscode --folder /home/devvy/projects
+```
+
+This command:
+- Configures Cursor/VS Code to connect as the `devvy` user (not root)
+- Opens the correct home directory (`/home/devvy`)
+- Ensures proper shell and terminal configuration
+
+### Manual Connection
+
 1. Start the container: `devvy start`
 2. Open VS Code/Cursor
 3. Press `Cmd+Shift+P` → "Dev Containers: Attach to Running Container"
 4. Select `claude-devvy-container`
+
+Note: The container includes a `.devcontainer/devcontainer.json` that automatically configures VS Code to connect as the `devvy` user.
 
 ## Project Structure
 

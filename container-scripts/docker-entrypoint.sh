@@ -120,62 +120,9 @@ if [ -d "/home/devvy/.tmux/plugins/tpm" ]; then
     echo "[INIT] Tmux plugins installation completed"
 fi
 
-# Install VS Code/Cursor extensions from extensions.txt
-if [ -f "/home/devvy/vscode-config/extensions.txt" ]; then
-    echo "[INIT] Preparing VS Code extensions..."
-    
-    # Create directories for VS Code Server and Cursor Server
-    su - devvy -c 'mkdir -p ~/.vscode-server ~/.cursor-server'
-    
-    # Create a script that will install extensions when VS Code Server is available
-    cat > /home/devvy/.vscode-server-install-extensions.sh << 'EOF'
-#!/bin/bash
-# This script installs extensions when VS Code Server CLI is available
-
-EXTENSIONS_FILE="/home/devvy/vscode-config/extensions.txt"
-INSTALLED_MARKER="/home/devvy/.vscode-server/.extensions-installed"
-
-# Check if already installed
-if [ -f "$INSTALLED_MARKER" ]; then
-    exit 0
-fi
-
-# Find VS Code Server CLI
-VSCODE_CLI=$(find ~/.vscode-server/cli -name "code" -type f 2>/dev/null | head -1)
-CURSOR_CLI=$(find ~/.cursor-server/cli -name "cursor" -type f 2>/dev/null | head -1)
-
-if [ -n "$VSCODE_CLI" ] && [ -f "$EXTENSIONS_FILE" ]; then
-    echo "Installing VS Code Server extensions..."
-    while IFS= read -r extension || [ -n "$extension" ]; do
-        if [ -n "$extension" ] && [[ ! "$extension" =~ ^# ]]; then
-            echo "  Installing: $extension"
-            "$VSCODE_CLI" --install-extension "$extension" --force 2>/dev/null || echo "    Warning: Could not install $extension"
-        fi
-    done < "$EXTENSIONS_FILE"
-    touch "$INSTALLED_MARKER"
-elif [ -n "$CURSOR_CLI" ] && [ -f "$EXTENSIONS_FILE" ]; then
-    echo "Installing Cursor Server extensions..."
-    while IFS= read -r extension || [ -n "$extension" ]; do
-        if [ -n "$extension" ] && [[ ! "$extension" =~ ^# ]]; then
-            echo "  Installing: $extension"
-            "$CURSOR_CLI" --install-extension "$extension" --force 2>/dev/null || echo "    Warning: Could not install $extension"
-        fi
-    done < "$EXTENSIONS_FILE"
-    touch "$INSTALLED_MARKER"
-fi
-EOF
-    
-    chown devvy:${DEVVY_GROUP} /home/devvy/.vscode-server-install-extensions.sh
-    chmod +x /home/devvy/.vscode-server-install-extensions.sh
-    
-    # Add to zshrc so it runs on each login (will check if already installed)
-    if ! grep -q "vscode-server-install-extensions" /home/devvy/.zshrc 2>/dev/null; then
-        echo '# Auto-install VS Code/Cursor extensions' >> /home/devvy/.zshrc
-        echo '[ -f ~/.vscode-server-install-extensions.sh ] && ~/.vscode-server-install-extensions.sh &' >> /home/devvy/.zshrc
-    fi
-    
-    echo "[INIT] VS Code Server extension installer prepared"
-fi
+# Create directories for VS Code Server and Cursor Server
+echo "[INIT] Creating VS Code/Cursor server directories..."
+su - devvy -c 'mkdir -p ~/.vscode-server ~/.cursor-server'
 
 # Skip permission changes on mounted directories - they inherit from host
 

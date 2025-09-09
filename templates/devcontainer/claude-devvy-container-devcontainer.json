@@ -1,0 +1,31 @@
+{
+  // Configuration for attaching to the claude-devvy-container
+  "name": "Devvy Container",
+  // The user that VS Code should use when connecting to the container
+  "remoteUser": "devvy",
+  // The default path VS Code should open when attaching to the container
+  "workspaceFolder": "/home/devvy",
+  // Container-specific VS Code settings
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "/bin/zsh"
+          }
+        }
+      },
+      // Extensions to install when attaching to the container
+      "extensions": []
+    }
+  },
+  // Environment variables for VS Code and its sub-processes
+  "remoteEnv": {
+    "SHELL": "/bin/zsh"
+  },
+  // Command to run after VS Code attaches to the container
+  "postAttachCommand": "echo 'Welcome to Devvy Container! 🚀' && echo 'User: $(whoami)' && echo 'Home: $HOME' && echo 'Shell: $SHELL'",
+  // Configure how the container is attached
+  "attachRunArgs": ["--name", "claude-devvy-container"]
+}
