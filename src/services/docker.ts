@@ -106,6 +106,18 @@ export async function isContainerRunning(name: string): Promise<boolean> {
 }
 
 /**
+ * Check if a container exists
+ */
+export async function containerExists(name: string): Promise<boolean> {
+  try {
+    await getContainer(name);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Remove a container
  */
 export async function removeContainer(name: string, force = false): Promise<void> {

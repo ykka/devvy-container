@@ -26,28 +26,10 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
       }
     }
 
-    // Check if GitHub SSH keys exist and ask about regeneration
+    // Check if GitHub SSH keys exist and skip regeneration
     const githubKeyExists = await ssh.gitHubSSHKeyExists();
     if (githubKeyExists) {
-      logger.info('\n🔑 GitHub SSH key exists');
-      logger.warn('⚠️  Regenerating the key will require you to:');
-      logger.step('1. Remove the old key from GitHub');
-      logger.step('2. Add the new key to GitHub');
-      logger.step('3. Update any scripts or CI/CD that use the old key');
-
-      const regenerateKey = await prompt.confirm('\nDo you want to regenerate the GitHub SSH key?', false);
-      if (regenerateKey) {
-        const { publicKey } = await ssh.generateGitHubSSHKey(true);
-        logger.info('\n📋 New GitHub SSH Public Key generated:');
-        logger.box(publicKey.trim());
-        logger.info('\nTo update GitHub with the new key:');
-        logger.step(`1. Go to ${chalk.cyan('https://github.com/settings/keys')}`);
-        logger.step('2. Delete the old Devvy Container SSH Key');
-        logger.step('3. Add the new key with the same title');
-        await prompt.confirm('\nPress Enter to continue with rebuild...', true);
-      } else {
-        logger.info('Keeping existing GitHub SSH key');
-      }
+      logger.info(`\n🔑 Using existing GitHub SSH key at ${chalk.cyan('~/.ssh/devvy_github_ed25519')} and rebuilding container with it`);
     }
 
     // Step 1: Stop container if running
@@ -61,11 +43,16 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
     // Step 2: Handle container SSH key removal before rebuild
     await ssh.updateContainerKeyForRebuild('localhost', CONSTANTS.SSH.PORT);
 
-    // Step 4: Remove old container
-    const removeSpinner = new Spinner('Removing old container...');
-    removeSpinner.start();
-    await docker.removeContainer(containerName, true);
-    removeSpinner.succeed('Old container removed');
+    // Step 4: Remove old container if it exists
+    const containerExists = await docker.containerExists(containerName);
+    if (containerExists) {
+      const removeSpinner = new Spinner('Removing old container...');
+      removeSpinner.start();
+      await docker.removeContainer(containerName, true);
+      removeSpinner.succeed('Old container removed');
+    } else {
+      logger.info('No existing container to remove');
+    }
 
     // Step 5: Build new image
     logger.info('\n📦 Building new container image...\n');

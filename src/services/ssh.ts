@@ -116,13 +116,16 @@ export async function addContainerSSHKeyToHostKnownHosts(host = 'localhost', por
  * Update container SSH key for rebuild
  */
 export async function updateContainerKeyForRebuild(host = 'localhost', port = CONSTANTS.SSH.PORT): Promise<void> {
-  console.log(chalk.yellow('\n⚠️  Container rebuild will generate new SSH keys'));
-  console.log(chalk.gray(`This affects [${host}]:${port} in host's known_hosts: ${knownHostsPath}`));
+  console.log(chalk.yellow("\n⚠️  Container rebuild will regenerate the container's SSH host key"));
+  console.log(chalk.gray(`The container's SSH host key is used to verify you're connecting to the correct container`));
+  console.log(chalk.gray(`This is separate from the GitHub SSH key (devvy_github_ed25519) used for git operations`));
+  console.log(chalk.gray(`Updating entry [${host}]:${port} in ${knownHostsPath}`));
 
   // Remove old container SSH key from host known_hosts
   await removeContainerSSHKeyFromHostKnownHosts(host, port);
 
-  console.log("Old container's SSH key removed from host's known_hosts. New key will be added after rebuild.");
+  console.log(`Removed previous container's fingerprint from your known_hosts file`);
+  console.log(`The new container's fingerprint will be automatically added when it starts`);
 }
 
 /**
