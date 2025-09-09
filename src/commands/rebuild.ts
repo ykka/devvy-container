@@ -29,7 +29,8 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
     // Check if GitHub SSH keys exist and skip regeneration
     const githubKeyExists = await ssh.gitHubSSHKeyExists();
     if (githubKeyExists) {
-      logger.info(`\n🔑 Using existing GitHub SSH key at ${chalk.cyan('~/.ssh/devvy_github_ed25519')} and rebuilding container with it`);
+      const githubKeyPath = ssh.getGitHubSSHKeyPath();
+      logger.info(`\n🔑 Using existing GitHub SSH key at ${chalk.cyan(`./${githubKeyPath}`)} and rebuilding container with it`);
     }
 
     // Step 1: Stop container if running
@@ -57,9 +58,8 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
     // Step 5: Build new image
     logger.info('\n📦 Building new container image...\n');
 
-    try {
-      await docker.composeBuild(options.noCache || false);
-    } catch {
+    const buildResult = await docker.composeBuild(options.noCache || false);
+    if (!buildResult) {
       logger.error('Failed to build container image');
       process.exit(1);
     }
@@ -70,9 +70,8 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
     const startSpinner = new Spinner('Starting new container...');
     startSpinner.start();
 
-    try {
-      await docker.composeUp(true, false);
-    } catch {
+    const upResult = await docker.composeUp(true, false);
+    if (!upResult) {
       startSpinner.fail('Failed to start container');
       process.exit(1);
     }
@@ -90,9 +89,14 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
     while (!containerReady && attempts < maxAttempts) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       try {
+        // Check if container can execute commands
         const result = await docker.execInContainer(containerName, ['true']);
         if (result.exitCode === 0) {
-          containerReady = true;
+          // Also check if SSH port is listening
+          const sshCheck = await docker.execInContainer(containerName, ['sh', '-c', 'netstat -tln | grep :22']);
+          if (sshCheck.exitCode === 0) {
+            containerReady = true;
+          }
         }
       } catch {
         // Container not ready yet

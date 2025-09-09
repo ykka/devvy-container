@@ -81,14 +81,42 @@ export async function removeContainerSSHKeyFromHostKnownHosts(host = 'localhost'
  */
 export async function addContainerSSHKeyToHostKnownHosts(host = 'localhost', port = CONSTANTS.SSH.PORT): Promise<boolean> {
   try {
-    // Wait a bit for SSH service to be ready
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    // Wait for SSH service to be ready with retries
+    let sshReady = false;
+    let attempts = 0;
+    const maxAttempts = 15; // Increased from 10
+    let sshKeyOutput = '';
 
-    // Scan for the container's SSH key
-    const { stdout } = await execAsync('ssh-keyscan', ['-p', port.toString(), '-H', host]);
+    logger.debug('Waiting for SSH service to be ready...');
 
-    if (!stdout) {
-      logger.warn("Could not retrieve container's SSH key");
+    // Initial wait for container to start services
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    while (!sshReady && attempts < maxAttempts) {
+      // Try to scan for the SSH key
+      const { stdout, exitCode } = await execAsync('ssh-keyscan', [
+        '-p',
+        port.toString(),
+        '-H',
+        host,
+        '-T',
+        '5', // 5 second timeout
+      ]);
+
+      if (stdout && exitCode === 0) {
+        sshReady = true;
+        sshKeyOutput = stdout;
+      } else {
+        // Wait before next attempt
+        logger.debug(`SSH service not ready yet (attempt ${attempts + 1}/${maxAttempts})`);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+
+      attempts++;
+    }
+
+    if (!sshReady || !sshKeyOutput) {
+      logger.warn("Could not retrieve container's SSH key after multiple attempts");
       return false;
     }
 
@@ -102,7 +130,7 @@ export async function addContainerSSHKeyToHostKnownHosts(host = 'localhost', por
 
     // Add to host's known_hosts
     await fs.ensureFile(knownHostsPath);
-    await fs.appendFile(knownHostsPath, stdout);
+    await fs.appendFile(knownHostsPath, sshKeyOutput);
     logger.success("Container's SSH key added to host's known_hosts");
 
     return true;
@@ -170,9 +198,9 @@ export async function generateGitHubSSHKey(regenerate = false): Promise<{
   privateKeyPath: string;
   existed: boolean;
 }> {
-  const githubKeysDir = path.join(secretsDir, CONSTANTS.SSH.GITHUB_KEY_DIR);
-  const privateKeyPath = path.join(githubKeysDir, CONSTANTS.SSH.GITHUB_KEY_NAME);
+  const privateKeyPath = getGitHubSSHKeyFullPath();
   const publicKeyPath = `${privateKeyPath}.pub`;
+  const githubKeysDir = path.dirname(privateKeyPath);
 
   await fs.ensureDir(githubKeysDir);
 
@@ -208,10 +236,22 @@ export async function generateGitHubSSHKey(regenerate = false): Promise<{
 }
 
 /**
+ * Get the full absolute path to the GitHub SSH private key (for internal use)
+ */
+function getGitHubSSHKeyFullPath(): string {
+  return path.join(secretsDir, CONSTANTS.SSH.GITHUB_KEY_DIR, CONSTANTS.SSH.GITHUB_KEY_NAME);
+}
+
+/**
  * Check if GitHub SSH key exists
  */
 export async function gitHubSSHKeyExists(): Promise<boolean> {
-  const githubKeysDir = path.join(secretsDir, CONSTANTS.SSH.GITHUB_KEY_DIR);
-  const privateKeyPath = path.join(githubKeysDir, CONSTANTS.SSH.GITHUB_KEY_NAME);
-  return fs.pathExists(privateKeyPath);
+  return fs.pathExists(getGitHubSSHKeyFullPath());
+}
+
+/**
+ * Get the relative path to the GitHub SSH private key (for display purposes)
+ */
+export function getGitHubSSHKeyPath(): string {
+  return path.join('secrets', CONSTANTS.SSH.GITHUB_KEY_DIR, CONSTANTS.SSH.GITHUB_KEY_NAME);
 }
