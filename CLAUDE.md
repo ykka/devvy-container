@@ -215,3 +215,13 @@ npm run format      # Auto-formats code with Biome
 2. Don't use non-null assertions (!) without proper checks
 3. Don't create classes with only static methods - use functions instead
 4. Always run quality checks before assuming code is ready
+5. **IMPORTANT**: When using `execa` with `shell: true`, pass the entire command as a single string, NOT split into command and args:
+   ```typescript
+   // WRONG - triggers Node.js DEP0190 warning
+   const [cmd, ...args] = command.split(' ');
+   await execa(cmd, args, { shell: true });
+   
+   // CORRECT - pass full command string when using shell
+   await execa(command, { shell: true });
+   ```
+   This is necessary for commands with pipes, redirections, or shell operators to work correctly.

@@ -46,18 +46,16 @@ export async function exec(command: string, args: string[] = [], options: Option
 export async function run(command: string, options: ShellOptions = {}): Promise<CommandResult> {
   const { silent = false, throwOnError = false, ...execaOptions } = options;
 
-  const [cmd, ...args] = command.split(' ');
-
   if (!silent) {
     logger.command(command);
   }
 
-  if (!cmd) {
+  if (!command || command.trim() === '') {
     throw new Error('Command cannot be empty');
   }
 
   try {
-    const result: ExecaReturnValue = await execa(cmd, args, {
+    const result: ExecaReturnValue = await execa(command, {
       ...execaOptions,
       reject: false,
       shell: true,
@@ -68,8 +66,8 @@ export async function run(command: string, options: ShellOptions = {}): Promise<
       stdout: result.stdout || '',
       stderr: result.stderr || '',
       exitCode: result.exitCode || 0,
-      command: cmd || '',
-      args,
+      command: command,
+      args: [],
     };
 
     if (!shellResult.success && throwOnError) {
@@ -90,8 +88,8 @@ export async function run(command: string, options: ShellOptions = {}): Promise<
       stdout: '',
       stderr: errorMessage,
       error: error instanceof Error ? error : new Error(errorMessage),
-      command: cmd || '',
-      args,
+      command: command,
+      args: [],
     };
   }
 }
