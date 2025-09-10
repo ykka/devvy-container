@@ -6,7 +6,6 @@ import { setupCommand } from '@commands/setup';
 import { startCommand } from '@commands/start';
 import { statusCommand } from '@commands/status';
 import { stopCommand } from '@commands/stop';
-import { syncCommand } from '@commands/sync';
 import { cursorCommand, vscodeCommand } from '@commands/vscode';
 import { CONSTANTS } from '@config/constants';
 import { logger } from '@utils/logger';
@@ -102,14 +101,6 @@ program
   .description('Initial setup and configuration')
   .action(async () => {
     await setupCommand();
-  });
-
-program
-  .command('sync')
-  .description('Import VS Code/Cursor settings for use inside container')
-  .option('--editor <type>', 'Specify editor (vscode or cursor)')
-  .action(async (options) => {
-    await syncCommand(options);
   });
 
 program

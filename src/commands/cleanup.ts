@@ -111,24 +111,6 @@ export async function cleanupCommand(options: CleanupOptions): Promise<void> {
       },
     },
     {
-      name: 'VS Code/Cursor Settings',
-      description: 'Reset VS Code/Cursor settings to defaults',
-      action: async () => {
-        const spinner = new Spinner('Resetting VS Code settings...');
-        spinner.start();
-
-        const vscodeConfigDir = path.join(process.cwd(), 'vscode-config');
-        if (await fs.pathExists(vscodeConfigDir)) {
-          await fs.writeJson(path.join(vscodeConfigDir, 'settings.json'), {});
-          await fs.writeJson(path.join(vscodeConfigDir, 'keybindings.json'), []);
-          await fs.writeFile(path.join(vscodeConfigDir, 'extensions.txt'), '');
-          spinner.succeed('VS Code settings reset to defaults');
-        } else {
-          spinner.info('No VS Code config directory found');
-        }
-      },
-    },
-    {
       name: 'SSH Keys and Secrets',
       description: 'Remove SSH keys and secrets directory',
       action: async () => {
@@ -233,13 +215,6 @@ async function performFullCleanup(): Promise<void> {
       if (await fs.pathExists(filePath)) {
         await fs.remove(filePath);
       }
-    }
-
-    const vscodeConfigDir = path.join(process.cwd(), 'vscode-config');
-    if (await fs.pathExists(vscodeConfigDir)) {
-      await fs.writeJson(path.join(vscodeConfigDir, 'settings.json'), {});
-      await fs.writeJson(path.join(vscodeConfigDir, 'keybindings.json'), []);
-      await fs.writeFile(path.join(vscodeConfigDir, 'extensions.txt'), '');
     }
 
     spinner.succeed('Full cleanup complete!');

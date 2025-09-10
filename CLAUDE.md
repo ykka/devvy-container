@@ -57,7 +57,6 @@ devvy rebuild       # Rebuild container (handles SSH known hosts automatically)
 devvy stop          # Stop the container
 devvy status        # Check container and services status
 devvy logs          # View container logs
-devvy sync          # Sync local changes to container
 devvy cleanup       # Clean up Docker resources
 ```
 
@@ -98,7 +97,6 @@ npm run test:coverage # Generate coverage report
 
 ### Test Structure
 Tests are located in the `src/__tests__/` directory, mirroring the source structure:
-- `src/__tests__/services/vscode.test.ts` - Tests for VS Code sync functionality
 - `src/__tests__/commands/setup.test.ts` - Tests for setup command (to be implemented)
 
 **IMPORTANT**: Keep tests inside `src/__tests__/` directory, not in a separate `tests/` folder at the root. This ensures:

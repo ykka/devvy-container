@@ -1,11 +1,9 @@
-import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { CONSTANTS } from '@config/constants';
 import { generateEnvFile } from '@config/environment';
 import { loadUserConfig, saveUserConfig, type UserConfig, userConfigExists } from '@config/user-config';
 import * as ssh from '@services/ssh';
-import * as vscode from '@services/vscode';
 import { logger } from '@utils/logger';
 import { expandPath, getProjectRoot } from '@utils/paths';
 import * as prompt from '@utils/prompt';
@@ -28,7 +26,6 @@ export async function setupCommand(): Promise<void> {
       generateSSHKeys,
       generateGitHubSSHKeys,
       setupUserConfig,
-      setupVSCodeSync,
     ];
 
     for (const step of steps) {
@@ -88,7 +85,7 @@ async function createDirectories(projectRoot: string): Promise<void> {
   const spinner = new Spinner('Creating project directories...');
   spinner.start();
 
-  const directories = [CONSTANTS.HOST_PATHS.SECRETS_DIR, CONSTANTS.HOST_PATHS.VSCODE_CONFIG_DIR, 'container-scripts'];
+  const directories = [CONSTANTS.HOST_PATHS.SECRETS_DIR, 'container-scripts'];
 
   for (const dir of directories) {
     const dirPath = path.join(projectRoot, dir);
@@ -164,67 +161,6 @@ async function generateGitHubSSHKeys(_projectRoot: string): Promise<void> {
   } catch (error) {
     spinner.fail('Failed to generate GitHub SSH keys');
     throw error;
-  }
-}
-
-async function setupVSCodeSync(projectRoot: string): Promise<void> {
-  // Check if settings already exist
-  const vscodeConfigDir = path.join(projectRoot, CONSTANTS.HOST_PATHS.VSCODE_CONFIG_DIR);
-  const settingsExist = await fs.pathExists(path.join(vscodeConfigDir, 'settings.json'));
-
-  if (settingsExist) {
-    // Check if the existing settings file has content
-    const existingSettings = await fs.readFile(path.join(vscodeConfigDir, 'settings.json'), 'utf-8');
-    if (existingSettings.trim() && existingSettings.trim() !== '{}') {
-      const overwrite = await prompt.confirm(
-        'Overwrite existing editor settings with your current configuration?',
-        false,
-      );
-      if (!overwrite) {
-        return;
-      }
-    }
-  } else {
-    const syncEditor = await prompt.confirm('Import editor settings to the project for container use?', true);
-    if (!syncEditor) {
-      return;
-    }
-  }
-
-  // Detect available editors
-  const cursorInstalled = (await vscode.detectEditor()) === 'cursor';
-  const vscodeInstalled = await fs.pathExists(
-    process.platform === 'darwin'
-      ? path.join(os.homedir(), 'Library', 'Application Support', 'Code')
-      : process.platform === 'win32'
-        ? path.join(os.homedir(), 'AppData', 'Roaming', 'Code')
-        : path.join(os.homedir(), '.config', 'Code'),
-  );
-
-  let editorType: vscode.EditorType | null = null;
-
-  if (cursorInstalled && vscodeInstalled) {
-    // Both editors are installed, ask user to choose
-    const choice = await prompt.select('Which editor settings would you like to import?', [
-      { name: 'Cursor - Import Cursor settings and extensions', value: 'cursor' },
-      { name: 'VS Code - Import VS Code settings and extensions', value: 'vscode' },
-    ]);
-    editorType = choice as vscode.EditorType;
-  } else if (cursorInstalled) {
-    editorType = 'cursor';
-  } else if (vscodeInstalled) {
-    editorType = 'vscode';
-  } else {
-    logger.info('No VS Code or Cursor installation detected, skipping editor sync');
-    return;
-  }
-
-  const editorName = editorType === 'cursor' ? 'Cursor' : 'VS Code';
-
-  try {
-    await vscode.importEditorSettings(editorType);
-  } catch (error) {
-    logger.error(`Failed to import ${editorName} settings`, error);
   }
 }
 

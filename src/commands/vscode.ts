@@ -1,5 +1,6 @@
 import * as path from 'node:path';
 import { CONSTANTS } from '@config/constants';
+import { getUserConfig } from '@config/user-config';
 import * as docker from '@services/docker';
 import * as vscode from '@services/vscode';
 import { logger } from '@utils/logger';
@@ -12,36 +13,69 @@ export interface EditorOptions {
   folder?: string;
 }
 
-async function selectRepository(containerName: string): Promise<string> {
-  const reposDir = '/home/devvy/repos';
+async function selectRepository(): Promise<string> {
+  const containerReposDir = '/home/devvy/repos';
 
-  // List directories in the repos folder
+  // Get the host projects path from configuration
+  const userConfig = getUserConfig();
+  const hostReposDir = userConfig.projectsPath;
+
+  if (!hostReposDir || !(await fs.pathExists(hostReposDir))) {
+    logger.warn(`Projects directory not found: ${hostReposDir || 'not configured'}`);
+    logger.info('Opening in the default repos directory...');
+    return containerReposDir;
+  }
+
+  // List directories in the host repos folder
   logger.info('Checking available repositories...');
-  const listCommand = `docker exec ${containerName} ls -d ${reposDir}/*/ 2>/dev/null | xargs -r -n1 basename`;
-  const result = await run(listCommand, { silent: true });
 
-  if (!result.success || !result.stdout.trim()) {
-    logger.warn('No repositories found in /home/devvy/repos');
+  const entries = await fs.readdir(hostReposDir, { withFileTypes: true });
+  const directories = entries.filter((entry) => entry.isDirectory());
+
+  if (directories.length === 0) {
+    logger.warn(`No repositories found in ${hostReposDir}`);
     logger.info('Opening in the repos directory...');
-    return reposDir;
+    return containerReposDir;
   }
 
-  const repos = result.stdout.trim().split('\n').filter(Boolean);
-
-  if (repos.length === 1) {
-    const selectedRepo = `${reposDir}/${repos[0]}`;
-    logger.info(`Found one repository: ${chalk.cyan(repos[0])}`);
-    return selectedRepo;
-  }
+  // Build choices, handling worktrees specially
+  const choices: Array<{ name: string; value: string }> = [];
 
   // Add option to open repos directory itself
-  const choices = [
-    { name: '📁 Open repos directory (no specific project)', value: reposDir },
-    ...repos.map((repo) => ({
-      name: `📦 ${repo}`,
-      value: `${reposDir}/${repo}`,
-    })),
-  ];
+  choices.push({ name: '📁 Open repos directory (no specific project)', value: containerReposDir });
+
+  for (const dir of directories) {
+    const dirName = dir.name;
+
+    // Check if this is a worktrees directory
+    if (dirName.endsWith('-worktrees')) {
+      const worktreesPath = path.join(hostReposDir, dirName);
+      const worktreeEntries = await fs.readdir(worktreesPath, { withFileTypes: true });
+      const worktreeDirs = worktreeEntries.filter((entry) => entry.isDirectory());
+
+      // Add each worktree as a choice
+      for (const worktree of worktreeDirs) {
+        const projectName = dirName.replace('-worktrees', '');
+        choices.push({
+          name: `🌳 ${projectName}/${worktree.name}`,
+          value: `${containerReposDir}/${dirName}/${worktree.name}`,
+        });
+      }
+    } else {
+      // Regular repository
+      choices.push({
+        name: `📦 ${dirName}`,
+        value: `${containerReposDir}/${dirName}`,
+      });
+    }
+  }
+
+  // If only one choice besides the repos directory, auto-select it
+  if (choices.length === 2 && choices[1]) {
+    const selectedChoice = choices[1];
+    logger.info(`Found one repository: ${chalk.cyan(selectedChoice.name.replace(/^[📦🌳] /u, ''))}`);
+    return selectedChoice.value;
+  }
 
   const selected = await prompt.select('Which repository would you like to open?', choices);
 
@@ -78,28 +112,15 @@ export async function cursorCommand(options: EditorOptions): Promise<void> {
     const containerUser = CONSTANTS.CONTAINER_USER_NAME;
 
     // Select repository if not provided
-    const workspaceFolder = options.folder || (await selectRepository(containerName));
-
-    // Check if extensions.txt exists
-    const extensionsPath = path.join(process.cwd(), 'vscode-config', 'extensions.txt');
-    if (!(await fs.pathExists(extensionsPath))) {
-      logger.warn('No vscode-config/extensions.txt found.');
-      logger.info(`Run ${chalk.cyan('devvy sync')} first to import your ${editorName} extensions.`);
-    }
+    const workspaceFolder = options.folder || (await selectRepository());
 
     // Create the attached container configuration with selected workspace
-    const { path: configPath, extensionCount } = await vscode.createAttachedContainerConfig(
-      editorType,
-      workspaceFolder,
-    );
+    const { path: configPath } = await vscode.createAttachedContainerConfig(editorType, workspaceFolder);
 
     // Show verbose output
     logger.success(`✓ Regenerated devcontainer configuration from template`);
     logger.info(`  Location: ${chalk.dim(configPath)}`);
     logger.info(`  ${chalk.dim('(This file is regenerated each time to ensure latest settings)')}`);
-    if (extensionCount > 0) {
-      logger.success(`✓ Included ${extensionCount} extensions from vscode-config/extensions.txt`);
-    }
     logger.success(`✓ Configured to connect as user: ${chalk.cyan(containerUser)}`);
     logger.success(`✓ Workspace folder: ${chalk.cyan(workspaceFolder)}`);
 
@@ -182,28 +203,15 @@ export async function vscodeCommand(options: EditorOptions): Promise<void> {
     const containerUser = CONSTANTS.CONTAINER_USER_NAME;
 
     // Select repository if not provided
-    const workspaceFolder = options.folder || (await selectRepository(containerName));
-
-    // Check if extensions.txt exists
-    const extensionsPath = path.join(process.cwd(), 'vscode-config', 'extensions.txt');
-    if (!(await fs.pathExists(extensionsPath))) {
-      logger.warn('No vscode-config/extensions.txt found.');
-      logger.info(`Run ${chalk.cyan('devvy sync')} first to import your ${editorName} extensions.`);
-    }
+    const workspaceFolder = options.folder || (await selectRepository());
 
     // Create the attached container configuration with selected workspace
-    const { path: configPath, extensionCount } = await vscode.createAttachedContainerConfig(
-      editorType,
-      workspaceFolder,
-    );
+    const { path: configPath } = await vscode.createAttachedContainerConfig(editorType, workspaceFolder);
 
     // Show verbose output
     logger.success(`✓ Regenerated devcontainer configuration from template`);
     logger.info(`  Location: ${chalk.dim(configPath)}`);
     logger.info(`  ${chalk.dim('(This file is regenerated each time to ensure latest settings)')}`);
-    if (extensionCount > 0) {
-      logger.success(`✓ Included ${extensionCount} extensions from vscode-config/extensions.txt`);
-    }
     logger.success(`✓ Configured to connect as user: ${chalk.cyan(containerUser)}`);
     logger.success(`✓ Workspace folder: ${chalk.cyan(workspaceFolder)}`);
 

@@ -36,12 +36,6 @@ services:
         target: /home/devvy/.claude
         # read_only: true # These files need to be writable for Claude Code to work
 
-      # VS Code configuration (version controlled)
-      - type: bind
-        source: ./vscode-config
-        target: /home/devvy/vscode-config
-        read_only: true
-
       # Git config (read-only)
       - type: bind
         source: ${GITCONFIG_PATH:-${HOME}/.gitconfig}

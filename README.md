@@ -49,7 +49,6 @@ devvy vscode     # Launch VS Code attached to container (as devvy user)
 devvy status     # Check container status
 devvy logs       # View container logs
 devvy rebuild    # Rebuild container (preserves data)
-devvy sync       # Sync VS Code/Cursor settings to container
 devvy cleanup    # Clean up Docker resources
 ```
 
@@ -96,7 +95,6 @@ claude-devvy-container/
 │   ├── host_rsa          # Private key on local machine for SSH access to the container
 │   ├── host_rsa.pub      # Public key
 │   └── authorized_keys   # Container's authorized keys
-├── vscode-config/    # VS Code settings (copied during setup)
 └── .env             # Configuration (created during setup)
 ```
 

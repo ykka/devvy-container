@@ -26,7 +26,6 @@ export const CONSTANTS = {
   HOST_PATHS: {
     ENV_FILE: '.env',
     SECRETS_DIR: 'secrets',
-    VSCODE_CONFIG_DIR: 'vscode-config',
   },
 
   // Default paths

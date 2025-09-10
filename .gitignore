@@ -6,7 +6,6 @@ secrets/
 
 # User configuration
 user.config.json
-vscode-config/
 
 # ENV file (generated)
 .env
