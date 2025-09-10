@@ -36,6 +36,7 @@ export async function cursorCommand(options: EditorOptions): Promise<void> {
 
     // Create or update the attached container configuration
     logger.info(`Configuring ${editorName} to connect as 'devvy' user...`);
+    logger.info(`Regenerating devcontainer configuration from template...`);
 
     const containerUser = CONSTANTS.CONTAINER_USER_NAME;
     const workspaceFolder = options.folder || `/home/${containerUser}`;
@@ -51,8 +52,9 @@ export async function cursorCommand(options: EditorOptions): Promise<void> {
     const { path: configPath, extensionCount } = await vscode.createAttachedContainerConfig(editorType);
 
     // Show verbose output
-    logger.success(`✓ Created devcontainer configuration at:`);
-    logger.info(`  ${chalk.dim(configPath)}`);
+    logger.success(`✓ Regenerated devcontainer configuration from template`);
+    logger.info(`  Location: ${chalk.dim(configPath)}`);
+    logger.info(`  ${chalk.dim('(This file is regenerated each time to ensure latest settings)')}`);
     if (extensionCount > 0) {
       logger.success(`✓ Included ${extensionCount} extensions from vscode-config/extensions.txt`);
     }
@@ -67,21 +69,41 @@ export async function cursorCommand(options: EditorOptions): Promise<void> {
     // The --folder-uri parameter specifies the container and folder to open
     const containerUri = `vscode-remote://attached-container+${Buffer.from(containerName).toString('hex')}${workspaceFolder}`;
 
-    const { exitCode } = await run(`${editorCommand} --folder-uri "${containerUri}"`);
+    const command = `${editorCommand} --folder-uri "${containerUri}"`;
+    logger.debug(`Executing: ${command}`);
 
-    if (exitCode !== 0) {
-      logger.error(`Failed to launch ${editorName}`);
+    const result = await run(command);
+
+    if (result.exitCode !== 0) {
+      logger.error(`Failed to launch ${editorName} (exit code: ${result.exitCode})`);
+
+      if (result.stderr) {
+        logger.error(`Error output: ${result.stderr}`);
+      }
+      if (result.stdout) {
+        logger.info(`Command output: ${result.stdout}`);
+      }
+
       logger.info('\nTroubleshooting:');
       logger.info('1. Ensure Dev Containers extension is installed');
       logger.info(`2. Try manually: ${editorName} > Cmd+Shift+P > "Dev Containers: Attach to Running Container"`);
       logger.info(`3. Select "${containerName}" from the list`);
+      logger.info(`4. Command attempted: ${command}`);
       process.exit(1);
     }
 
     logger.success(`✓ ${editorName} is attaching to the container as '${containerUser}' user`);
     logger.info('\nNote: It may take a moment for the connection to establish.');
   } catch (error) {
-    logger.error('Failed to launch Cursor', error);
+    logger.error('Failed to launch Cursor');
+    if (error instanceof Error) {
+      logger.error(`Error message: ${error.message}`);
+      if (error.stack) {
+        logger.debug(`Stack trace: ${error.stack}`);
+      }
+    } else {
+      logger.error(`Error details: ${String(error)}`);
+    }
     process.exit(1);
   }
 }
@@ -113,6 +135,7 @@ export async function vscodeCommand(options: EditorOptions): Promise<void> {
 
     // Create or update the attached container configuration
     logger.info(`Configuring ${editorName} to connect as 'devvy' user...`);
+    logger.info(`Regenerating devcontainer configuration from template...`);
 
     const containerUser = CONSTANTS.CONTAINER_USER_NAME;
     const workspaceFolder = options.folder || `/home/${containerUser}`;
@@ -128,8 +151,9 @@ export async function vscodeCommand(options: EditorOptions): Promise<void> {
     const { path: configPath, extensionCount } = await vscode.createAttachedContainerConfig(editorType);
 
     // Show verbose output
-    logger.success(`✓ Created devcontainer configuration at:`);
-    logger.info(`  ${chalk.dim(configPath)}`);
+    logger.success(`✓ Regenerated devcontainer configuration from template`);
+    logger.info(`  Location: ${chalk.dim(configPath)}`);
+    logger.info(`  ${chalk.dim('(This file is regenerated each time to ensure latest settings)')}`);
     if (extensionCount > 0) {
       logger.success(`✓ Included ${extensionCount} extensions from vscode-config/extensions.txt`);
     }
@@ -144,21 +168,41 @@ export async function vscodeCommand(options: EditorOptions): Promise<void> {
     // The --folder-uri parameter specifies the container and folder to open
     const containerUri = `vscode-remote://attached-container+${Buffer.from(containerName).toString('hex')}${workspaceFolder}`;
 
-    const { exitCode } = await run(`${editorCommand} --folder-uri "${containerUri}"`);
+    const command = `${editorCommand} --folder-uri "${containerUri}"`;
+    logger.info(`Executing command: ${command}`);
 
-    if (exitCode !== 0) {
-      logger.error(`Failed to launch ${editorName}`);
+    const result = await run(command, { silent: true });
+
+    if (result.exitCode !== 0) {
+      logger.error(`Failed to launch ${editorName} (exit code: ${result.exitCode})`);
+
+      if (result.stderr) {
+        logger.error(`Error output: ${result.stderr}`);
+      }
+      if (result.stdout) {
+        logger.info(`Command output: ${result.stdout}`);
+      }
+
       logger.info('\nTroubleshooting:');
       logger.info('1. Ensure Dev Containers extension is installed');
       logger.info(`2. Try manually: ${editorName} > Cmd+Shift+P > "Dev Containers: Attach to Running Container"`);
       logger.info(`3. Select "${containerName}" from the list`);
+      logger.info(`4. Command attempted: ${command}`);
       process.exit(1);
     }
 
     logger.success(`✓ ${editorName} is attaching to the container as '${containerUser}' user`);
     logger.info('\nNote: It may take a moment for the connection to establish.');
   } catch (error) {
-    logger.error('Failed to launch VS Code', error);
+    logger.error('Failed to launch VS Code');
+    if (error instanceof Error) {
+      logger.error(`Error message: ${error.message}`);
+      if (error.stack) {
+        logger.debug(`Stack trace: ${error.stack}`);
+      }
+    } else {
+      logger.error(`Error details: ${String(error)}`);
+    }
     process.exit(1);
   }
 }
