@@ -29,7 +29,10 @@ export async function cleanupCommand(options: CleanupOptions): Promise<void> {
 
   if (options.all && !options.dryRun) {
     if (!options.force) {
-      const confirmed = await prompt.confirm(chalk.red.bold('WARNING: This will remove EVERYTHING. Are you sure?'), false);
+      const confirmed = await prompt.confirm(
+        chalk.red.bold('WARNING: This will remove EVERYTHING (including GitHub SSH keys). Are you sure?'),
+        false,
+      );
       if (!confirmed) {
         logger.info('Cleanup cancelled');
         return;
@@ -37,6 +40,31 @@ export async function cleanupCommand(options: CleanupOptions): Promise<void> {
     }
     await performFullCleanup();
     return;
+  }
+
+  // Ask about full cleanup first (if not already specified via --all flag)
+  if (!options.dryRun && !options.all) {
+    const fullCleanup = await prompt.confirm(
+      chalk.yellow(
+        'Perform full cleanup? (Remove container, volumes, SSH keys, GitHub SSH keys, configs - EVERYTHING)',
+      ),
+      false,
+    );
+
+    if (fullCleanup) {
+      const confirmFull = await prompt.confirm(
+        chalk.red.bold('WARNING: This will remove EVERYTHING (including GitHub SSH keys). Are you sure?'),
+        false,
+      );
+      if (confirmFull) {
+        await performFullCleanup();
+        return;
+      }
+    }
+
+    logger.info('');
+    logger.info('Select individual items to clean up:');
+    logger.info('');
   }
 
   const containerName = CONSTANTS.DOCKER.CONTAINER_NAME;
@@ -150,29 +178,15 @@ export async function cleanupCommand(options: CleanupOptions): Promise<void> {
     return;
   }
 
-  logger.info(chalk.bold('What would you like to clean up?'));
-  logger.info('');
-
   const selectedActions: CleanupAction[] = [];
 
-  for (const [i, cleanupAction] of cleanupActions.entries()) {
-    const action = cleanupAction;
-    const question = `${i + 1}. ${action.description}${action.sizeEstimate ? ` (${action.sizeEstimate})` : ''}?`;
+  for (const action of cleanupActions) {
+    const question = `${action.description}${action.sizeEstimate ? ` (${action.sizeEstimate})` : ''}?`;
 
     const confirmed = await prompt.confirm(question, false);
     if (confirmed) {
       selectedActions.push(action);
     }
-  }
-
-  logger.info('');
-  logger.info(chalk.gray('──────────────────────────────────'));
-
-  const fullReset = await prompt.confirm(chalk.red.bold('WARNING: FULL RESET - Remove everything?'), false);
-
-  if (fullReset) {
-    await performFullCleanup();
-    return;
   }
 
   if (selectedActions.length === 0) {
@@ -237,9 +251,15 @@ async function performFullCleanup(): Promise<void> {
 
 async function getDockerResourceSize(containerName: string, imageName: string): Promise<string> {
   try {
-    const { stdout: containerSize } = await run(`docker ps -a --filter name=${containerName} --format "table {{.Size}}" | tail -n +2`, { silent: true });
+    const { stdout: containerSize } = await run(
+      `docker ps -a --filter name=${containerName} --format "table {{.Size}}" | tail -n +2`,
+      { silent: true },
+    );
 
-    const { stdout: imageSize } = await run(`docker images ${imageName} --format "{{.Size}}" 2>/dev/null || echo "0B"`, { silent: true });
+    const { stdout: imageSize } = await run(
+      `docker images ${imageName} --format "{{.Size}}" 2>/dev/null || echo "0B"`,
+      { silent: true },
+    );
 
     const sizes = [];
     if (containerSize?.trim()) sizes.push(containerSize.trim());
@@ -253,7 +273,10 @@ async function getDockerResourceSize(containerName: string, imageName: string): 
 
 async function getVolumeSize(): Promise<string> {
   try {
-    const { stdout } = await run(`docker system df -v | grep claude-devvy-container | awk '{sum+=$4} END {print sum}'`, { silent: true });
+    const { stdout } = await run(
+      `docker system df -v | grep claude-devvy-container | awk '{sum+=$4} END {print sum}'`,
+      { silent: true },
+    );
 
     if (stdout?.trim()) {
       const sizeInBytes = Number.parseInt(stdout.trim(), 10);

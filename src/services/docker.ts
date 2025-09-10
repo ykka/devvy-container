@@ -209,7 +209,15 @@ export async function composeUp(detach = true, build = false): Promise<boolean> 
  * Run docker-compose down
  */
 export async function composeDown(removeVolumes = false): Promise<void> {
-  const command = ['docker', 'compose', '-p', CONSTANTS.DOCKER.PROJECT_NAME, '-f', CONSTANTS.DOCKER.COMPOSE_FILE, 'down'];
+  const command = [
+    'docker',
+    'compose',
+    '-p',
+    CONSTANTS.DOCKER.PROJECT_NAME,
+    '-f',
+    CONSTANTS.DOCKER.COMPOSE_FILE,
+    'down',
+  ];
 
   if (removeVolumes) {
     command.push('-v');
@@ -234,7 +242,15 @@ export async function composeDown(removeVolumes = false): Promise<void> {
  * Build docker-compose services
  */
 export async function composeBuild(noCache = false): Promise<boolean> {
-  const command = ['docker', 'compose', '-p', CONSTANTS.DOCKER.PROJECT_NAME, '-f', CONSTANTS.DOCKER.COMPOSE_FILE, 'build'];
+  const command = [
+    'docker',
+    'compose',
+    '-p',
+    CONSTANTS.DOCKER.PROJECT_NAME,
+    '-f',
+    CONSTANTS.DOCKER.COMPOSE_FILE,
+    'build',
+  ];
 
   if (noCache) {
     command.push('--no-cache');
@@ -260,7 +276,11 @@ export async function composeBuild(noCache = false): Promise<boolean> {
 /**
  * Stream container logs in real-time
  */
-export async function streamContainerLogs(name: string, onData: (chunk: string) => void, since?: number): Promise<() => void> {
+export async function streamContainerLogs(
+  name: string,
+  onData: (chunk: string) => void,
+  since?: number,
+): Promise<() => void> {
   const container = await getContainer(name);
 
   const logStream = (await container.logs({

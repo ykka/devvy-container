@@ -33,5 +33,5 @@ export PATH="$HOME/.npm-global/bin:$PATH"
 alias zshconfig="nvim ~/.zshrc"
 alias ohmyzsh="nvim ~/.oh-my-zsh"
 alias vim="nvim"
-alias claude="claude --dangerously-skip-permissions"
+alias claudy="claude --dangerously-skip-permissions"
 

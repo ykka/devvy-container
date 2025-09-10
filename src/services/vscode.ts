@@ -73,7 +73,8 @@ function getEditorPaths(type: EditorType) {
       configPath: basePath,
       settingsPath: path.join(basePath, 'User', 'settings.json'),
       keybindingsPath: path.join(basePath, 'User', 'keybindings.json'),
-      extensionsPath: platform === 'darwin' ? path.join(homeDir, '.cursor', 'extensions') : path.join(basePath, 'extensions'),
+      extensionsPath:
+        platform === 'darwin' ? path.join(homeDir, '.cursor', 'extensions') : path.join(basePath, 'extensions'),
       snippetsPath: path.join(basePath, 'User', 'snippets'),
       commandName: 'cursor',
     };
@@ -93,7 +94,8 @@ function getEditorPaths(type: EditorType) {
     configPath: basePath,
     settingsPath: path.join(basePath, 'User', 'settings.json'),
     keybindingsPath: path.join(basePath, 'User', 'keybindings.json'),
-    extensionsPath: platform === 'darwin' ? path.join(homeDir, '.vscode', 'extensions') : path.join(basePath, 'extensions'),
+    extensionsPath:
+      platform === 'darwin' ? path.join(homeDir, '.vscode', 'extensions') : path.join(basePath, 'extensions'),
     snippetsPath: path.join(basePath, 'User', 'snippets'),
     commandName: 'code',
   };
@@ -125,7 +127,12 @@ export async function detectEditor(): Promise<EditorType | null> {
  * Prepare attached container configuration from template and extensions
  */
 async function prepareAttachedContainerConfig(): Promise<AttachedContainerConfig> {
-  const templatePath = path.join(process.cwd(), 'templates', 'devcontainer', 'claude-devvy-container-devcontainer.json');
+  const templatePath = path.join(
+    process.cwd(),
+    'templates',
+    'devcontainer',
+    'claude-devvy-container-devcontainer.json',
+  );
   const extensionsPath = path.join(projectConfigDir, 'extensions.txt');
 
   // Read the template
@@ -152,7 +159,9 @@ async function prepareAttachedContainerConfig(): Promise<AttachedContainerConfig
 /**
  * Create or update attached container configuration
  */
-export async function createAttachedContainerConfig(editorType: EditorType): Promise<{ path: string; extensionCount: number }> {
+export async function createAttachedContainerConfig(
+  editorType: EditorType,
+): Promise<{ path: string; extensionCount: number }> {
   const configPath = getAttachedContainerConfigPath(editorType);
   const configDir = path.dirname(configPath);
 

@@ -21,7 +21,15 @@ export async function setupCommand(): Promise<void> {
 
     const projectRoot = getProjectRoot();
 
-    const steps = [checkDockerInstallation, checkDockerCompose, createDirectories, generateSSHKeys, generateGitHubSSHKeys, setupUserConfig, setupVSCodeSync];
+    const steps = [
+      checkDockerInstallation,
+      checkDockerCompose,
+      createDirectories,
+      generateSSHKeys,
+      generateGitHubSSHKeys,
+      setupUserConfig,
+      setupVSCodeSync,
+    ];
 
     for (const step of steps) {
       await step(projectRoot);
@@ -168,7 +176,10 @@ async function setupVSCodeSync(projectRoot: string): Promise<void> {
     // Check if the existing settings file has content
     const existingSettings = await fs.readFile(path.join(vscodeConfigDir, 'settings.json'), 'utf-8');
     if (existingSettings.trim() && existingSettings.trim() !== '{}') {
-      const overwrite = await prompt.confirm('Overwrite existing editor settings with your current configuration?', false);
+      const overwrite = await prompt.confirm(
+        'Overwrite existing editor settings with your current configuration?',
+        false,
+      );
       if (!overwrite) {
         return;
       }
@@ -270,63 +281,34 @@ async function setupUserConfig(_projectRoot: string): Promise<void> {
     };
   }
 
-  // Step 3: LazyVim
-
-  // Step 3: LazyVim
+  // Step 3: LazyVim configuration (optional - user's existing config)
   const editor: UserConfig['editor'] = {};
-  const installLazyvim = await prompt.confirm('Would you like to install LazyVim in the container?', existingConfig?.editor?.lazyvim?.enabled ?? true);
+  const useExistingLazyvimConfig = await prompt.confirm('Use your existing Neovim configuration?', false);
 
-  if (installLazyvim) {
-    const useExistingConfig = await prompt.confirm('Use your existing Neovim configuration?', true);
-    if (useExistingConfig) {
-      const defaultPath = CONSTANTS.DEFAULT_PATHS.LAZYVIM_CONFIG;
-      const configPath = await prompt.input({
-        message: 'Path to your Neovim config directory:',
-        default: existingConfig?.editor?.lazyvim?.readOnlyConfigPath || defaultPath,
-      });
+  if (useExistingLazyvimConfig) {
+    const defaultPath = CONSTANTS.DEFAULT_PATHS.LAZYVIM_CONFIG;
+    const configPath = await prompt.input({
+      message: 'Path to your Neovim config directory:',
+      default: existingConfig?.editor?.lazyvim?.readOnlyConfigPath || defaultPath,
+    });
 
-      const expandedConfigPath = expandPath(configPath);
-      if (await fs.pathExists(expandedConfigPath)) {
-        editor.lazyvim = {
-          enabled: true,
-          readOnlyConfigPath: configPath,
-        };
-      } else {
-        logger.warn(`Path ${configPath} doesn't exist. LazyVim will be installed with defaults.`);
-        editor.lazyvim = {
-          enabled: true,
-        };
-      }
+    const expandedConfigPath = expandPath(configPath);
+    if (await fs.pathExists(expandedConfigPath)) {
+      editor.lazyvim = {
+        enabled: true,
+        readOnlyConfigPath: configPath,
+      };
     } else {
+      logger.warn(`Path ${configPath} doesn't exist. LazyVim will be installed with defaults.`);
       editor.lazyvim = {
         enabled: true,
       };
     }
   } else {
+    // LazyVim will be installed with defaults
     editor.lazyvim = {
-      enabled: false,
+      enabled: true,
     };
-  }
-
-  // Step 4: Tmux
-  const terminal: UserConfig['terminal'] = {};
-  const useTmux = await prompt.confirm('Would you like to use your existing tmux configuration?', !!existingConfig?.terminal?.tmux?.readOnlyConfigPath);
-
-  if (useTmux) {
-    const defaultPath = CONSTANTS.DEFAULT_PATHS.TMUX_CONFIG;
-    const configPath = await prompt.input({
-      message: 'Path to your tmux config directory:',
-      default: existingConfig?.terminal?.tmux?.readOnlyConfigPath || defaultPath,
-    });
-
-    const expandedConfigPath = expandPath(configPath);
-    if (await fs.pathExists(expandedConfigPath)) {
-      terminal.tmux = {
-        readOnlyConfigPath: configPath,
-      };
-    } else {
-      logger.warn(`Path ${configPath} doesn't exist. Tmux will use defaults.`);
-    }
   }
 
   // Build final configuration - merge with existing config or defaults
@@ -335,7 +317,7 @@ async function setupUserConfig(_projectRoot: string): Promise<void> {
     projectsPath,
     integrations,
     editor,
-    terminal,
+    terminal: existingFullConfig?.terminal || {},
     firewall: existingFullConfig?.firewall || { allowedDomains: [] },
   };
 

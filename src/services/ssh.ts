@@ -41,7 +41,18 @@ export async function generateHostSSHKey(): Promise<{
 
   // Generate new key pair
   logger.info('Generating SSH key pair on local machine...');
-  const result = await execAsync('ssh-keygen', ['-t', 'rsa', '-b', '4096', '-f', privateKeyPath, '-N', '', '-C', CONSTANTS.DOCKER.CONTAINER_NAME]);
+  const result = await execAsync('ssh-keygen', [
+    '-t',
+    'rsa',
+    '-b',
+    '4096',
+    '-f',
+    privateKeyPath,
+    '-N',
+    '',
+    '-C',
+    CONSTANTS.DOCKER.CONTAINER_NAME,
+  ]);
 
   if (!result.success) {
     throw new Error(`Failed to generate SSH key: ${result.stderr || 'Unknown error'}`);
@@ -63,7 +74,10 @@ export async function generateHostSSHKey(): Promise<{
 /**
  * Remove container SSH key from host known_hosts
  */
-export async function removeContainerSSHKeyFromHostKnownHosts(host = 'localhost', port = CONSTANTS.SSH.PORT): Promise<void> {
+export async function removeContainerSSHKeyFromHostKnownHosts(
+  host = 'localhost',
+  port = CONSTANTS.SSH.PORT,
+): Promise<void> {
   const hostPattern = port.toString() === '22' ? host : `[${host}]:${port}`;
 
   try {
@@ -79,7 +93,10 @@ export async function removeContainerSSHKeyFromHostKnownHosts(host = 'localhost'
 /**
  * Add container SSH key to host known_hosts
  */
-export async function addContainerSSHKeyToHostKnownHosts(host = 'localhost', port = CONSTANTS.SSH.PORT): Promise<boolean> {
+export async function addContainerSSHKeyToHostKnownHosts(
+  host = 'localhost',
+  port = CONSTANTS.SSH.PORT,
+): Promise<boolean> {
   try {
     // Wait for SSH service to be ready with retries
     let sshReady = false;
@@ -221,7 +238,18 @@ export async function generateGitHubSSHKey(regenerate = false): Promise<{
   // Generate new key pair
   logger.info('Generating GitHub SSH key pair...');
   const comment = `devvy-github-${new Date().toISOString().split('T')[0]}`;
-  const result = await execAsync('ssh-keygen', ['-t', 'rsa', '-b', '4096', '-f', privateKeyPath, '-N', '', '-C', comment]);
+  const result = await execAsync('ssh-keygen', [
+    '-t',
+    'rsa',
+    '-b',
+    '4096',
+    '-f',
+    privateKeyPath,
+    '-N',
+    '',
+    '-C',
+    comment,
+  ]);
 
   if (!result.success) {
     throw new Error(`Failed to generate GitHub SSH key: ${result.stderr || 'Unknown error'}`);

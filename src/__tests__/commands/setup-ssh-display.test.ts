@@ -79,7 +79,8 @@ describe('GitHub SSH Key Display', () => {
     continuation of key...
     end of key devvy-github-2025-09-09`;
 
-    const expectedTrimmed = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC5nVDDqEP83vgI...\n    continuation of key...\n    end of key devvy-github-2025-09-09';
+    const expectedTrimmed =
+      'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC5nVDDqEP83vgI...\n    continuation of key...\n    end of key devvy-github-2025-09-09';
 
     // Simulate the display code
     console.log(multilineKey.trim());

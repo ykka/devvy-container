@@ -105,7 +105,9 @@ export async function vscodeCommand(options: EditorOptions): Promise<void> {
     if (!(await commandExists(editorCommand))) {
       logger.error(`${editorName} command line tools are not installed.`);
       logger.info('Install VS Code from: https://code.visualstudio.com');
-      logger.info('Then install the command line tools: Cmd+Shift+P > "Shell Command: Install \'code\' command in PATH"');
+      logger.info(
+        'Then install the command line tools: Cmd+Shift+P > "Shell Command: Install \'code\' command in PATH"',
+      );
       process.exit(1);
     }
 

@@ -45,7 +45,9 @@ export function loadEnvConfig(): EnvConfig {
   } catch (error) {
     if (error instanceof z.ZodError) {
       logger.error('Environment configuration validation failed:', { errors: error.errors });
-      throw new Error(`Missing required environment variables: ${error.errors.map((e) => e.path.join('.')).join(', ')}`);
+      throw new Error(
+        `Missing required environment variables: ${error.errors.map((e) => e.path.join('.')).join(', ')}`,
+      );
     }
     throw error;
   }

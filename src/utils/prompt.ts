@@ -61,7 +61,10 @@ export async function select<T = string>(message: string, choices: Array<{ name:
   return selected;
 }
 
-export async function path(message: string, options: { exists?: boolean; isFile?: boolean; isDirectory?: boolean } = {}): Promise<string> {
+export async function path(
+  message: string,
+  options: { exists?: boolean; isFile?: boolean; isDirectory?: boolean } = {},
+): Promise<string> {
   const { value } = await inquirer.prompt<{ value: string }>([
     {
       type: 'input',

@@ -125,7 +125,10 @@ describe('VS Code Service', () => {
       const vscodePath = path.join(homedir, 'Library', 'Application Support', 'Code');
 
       mockPathExists.mockImplementation(async (checkPath: string) => {
-        return checkPath === path.join(vscodePath, 'User', 'settings.json') || checkPath === path.join(vscodePath, 'User', 'keybindings.json');
+        return (
+          checkPath === path.join(vscodePath, 'User', 'settings.json') ||
+          checkPath === path.join(vscodePath, 'User', 'keybindings.json')
+        );
       });
 
       mockRun.mockResolvedValue({
@@ -137,13 +140,22 @@ describe('VS Code Service', () => {
       await importEditorSettings('vscode');
 
       // Check that settings were imported
-      expect(fs.writeFile).toHaveBeenCalledWith(path.join(process.cwd(), 'vscode-config', 'settings.json'), mockSettingsContent);
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        path.join(process.cwd(), 'vscode-config', 'settings.json'),
+        mockSettingsContent,
+      );
 
       // Check that keybindings were imported
-      expect(fs.writeFile).toHaveBeenCalledWith(path.join(process.cwd(), 'vscode-config', 'keybindings.json'), mockKeybindingsContent);
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        path.join(process.cwd(), 'vscode-config', 'keybindings.json'),
+        mockKeybindingsContent,
+      );
 
       // Check that extensions were imported
-      expect(fs.writeFile).toHaveBeenCalledWith(path.join(process.cwd(), 'vscode-config', 'extensions.txt'), mockExtensionsOutput.trim());
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        path.join(process.cwd(), 'vscode-config', 'extensions.txt'),
+        mockExtensionsOutput.trim(),
+      );
 
       expect(logger.success).toHaveBeenCalledWith(expect.stringContaining('Successfully imported'));
     });
@@ -153,7 +165,10 @@ describe('VS Code Service', () => {
       const cursorPath = path.join(homedir, 'Library', 'Application Support', 'Cursor');
 
       mockPathExists.mockImplementation(async (checkPath: string) => {
-        return checkPath === path.join(cursorPath, 'User', 'settings.json') || checkPath === path.join(cursorPath, 'User', 'keybindings.json');
+        return (
+          checkPath === path.join(cursorPath, 'User', 'settings.json') ||
+          checkPath === path.join(cursorPath, 'User', 'keybindings.json')
+        );
       });
 
       mockRun.mockResolvedValue({
@@ -221,7 +236,9 @@ describe('VS Code Service', () => {
 
       await importEditorSettings('vscode');
 
-      expect(fs.copy).toHaveBeenCalledWith(snippetsPath, path.join(process.cwd(), 'vscode-config', 'snippets'), { overwrite: true });
+      expect(fs.copy).toHaveBeenCalledWith(snippetsPath, path.join(process.cwd(), 'vscode-config', 'snippets'), {
+        overwrite: true,
+      });
     });
 
     it('should handle Windows paths correctly', async () => {
@@ -245,7 +262,10 @@ describe('VS Code Service', () => {
 
       await importEditorSettings('vscode');
 
-      expect(fs.writeFile).toHaveBeenCalledWith(path.join(process.cwd(), 'vscode-config', 'settings.json'), mockSettingsContent);
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        path.join(process.cwd(), 'vscode-config', 'settings.json'),
+        mockSettingsContent,
+      );
     });
 
     it('should handle Linux paths correctly', async () => {
@@ -269,7 +289,10 @@ describe('VS Code Service', () => {
 
       await importEditorSettings('vscode');
 
-      expect(fs.writeFile).toHaveBeenCalledWith(path.join(process.cwd(), 'vscode-config', 'settings.json'), mockSettingsContent);
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        path.join(process.cwd(), 'vscode-config', 'settings.json'),
+        mockSettingsContent,
+      );
     });
 
     it('should handle extension command failure', async () => {

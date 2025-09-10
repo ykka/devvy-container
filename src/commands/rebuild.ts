@@ -30,7 +30,9 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
     const githubKeyExists = await ssh.gitHubSSHKeyExists();
     if (githubKeyExists) {
       const githubKeyPath = ssh.getGitHubSSHKeyPath();
-      logger.info(`\n🔑 Using existing GitHub SSH key at ${chalk.cyan(`./${githubKeyPath}`)} and rebuilding container with it`);
+      logger.info(
+        `\n🔑 Reusing existing GitHub SSH key at ${chalk.cyan(`./${githubKeyPath}`)} and rebuilding container with it (no need to add new key at GitHub).`,
+      );
     }
 
     // Step 1: Stop container if running

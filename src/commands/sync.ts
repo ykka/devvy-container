@@ -46,7 +46,10 @@ export async function syncCommand(options: SyncOptions): Promise<void> {
     // Always import from editor to project (one-way sync)
 
     // Confirm action
-    const confirmed = await prompt.confirm(`Import settings from ${editorName} to claude-devvy-container project for use inside the container?`, true);
+    const confirmed = await prompt.confirm(
+      `Import settings from ${editorName} to claude-devvy-container project for use inside the container?`,
+      true,
+    );
 
     if (!confirmed) {
       logger.info('Sync cancelled');
