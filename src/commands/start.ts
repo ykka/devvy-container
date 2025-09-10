@@ -65,20 +65,34 @@ export async function startCommand(options: StartOptions): Promise<void> {
       spinner.fail('Failed to start container');
       process.exit(1);
     }
-    spinner.next();
+    // Complete the progress spinner before SSH setup (which may prompt user)
+    spinner.complete();
 
-    await ssh.addContainerSSHKeyToHostKnownHosts('localhost', CONSTANTS.SSH.PORT);
-    spinner.next();
+    // Initialize container and setup SSH
+    const initResult = await docker.initializeContainerWithSSH(containerName, {
+      timeout: 30000, // 30 seconds timeout for start
+      isRebuild: false,
+    });
 
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const newContainerInfo = await docker.getContainerInfo(containerName).catch(() => null);
-    if (!newContainerInfo || newContainerInfo.state !== 'running') {
-      spinner.fail('Container failed to start properly');
+    if (!initResult.success) {
+      logger.error('Container initialization failed');
+      if (initResult.error) {
+        logger.error(`Error: ${initResult.error}`);
+      }
       process.exit(1);
     }
 
-    spinner.complete();
+    // Create a new simple spinner for final verification
+    const verifySpinner = new Spinner('Verifying container health...');
+    verifySpinner.start();
+
+    const newContainerInfo = await docker.getContainerInfo(containerName).catch(() => null);
+    if (!newContainerInfo || newContainerInfo.state !== 'running') {
+      verifySpinner.fail('Container failed to start properly');
+      process.exit(1);
+    }
+
+    verifySpinner.succeed('Container is healthy and running');
 
     logger.success('Container started successfully');
 

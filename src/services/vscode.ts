@@ -126,7 +126,7 @@ export async function detectEditor(): Promise<EditorType | null> {
 /**
  * Prepare attached container configuration from template and extensions
  */
-async function prepareAttachedContainerConfig(): Promise<AttachedContainerConfig> {
+async function prepareAttachedContainerConfig(workspaceFolder?: string): Promise<AttachedContainerConfig> {
   const templatePath = path.join(
     process.cwd(),
     'templates',
@@ -137,6 +137,13 @@ async function prepareAttachedContainerConfig(): Promise<AttachedContainerConfig
 
   // Read the template
   const template = await fs.readJson(templatePath);
+
+  // Update workspace folder if provided
+  if (workspaceFolder) {
+    template.workspaceFolder = workspaceFolder;
+    // Update postAttachCommand to cd into the workspace folder
+    template.postAttachCommand = `cd ${workspaceFolder}`;
+  }
 
   // Read extensions if available
   if (await fs.pathExists(extensionsPath)) {
@@ -161,6 +168,7 @@ async function prepareAttachedContainerConfig(): Promise<AttachedContainerConfig
  */
 export async function createAttachedContainerConfig(
   editorType: EditorType,
+  workspaceFolder?: string,
 ): Promise<{ path: string; extensionCount: number }> {
   const configPath = getAttachedContainerConfigPath(editorType);
   const configDir = path.dirname(configPath);
@@ -171,7 +179,7 @@ export async function createAttachedContainerConfig(
   await fs.ensureDir(configDir);
 
   // Prepare the configuration from template and extensions
-  const config = await prepareAttachedContainerConfig();
+  const config = await prepareAttachedContainerConfig(workspaceFolder);
 
   // Write the configuration
   await fs.writeJson(configPath, config, { spaces: 2 });

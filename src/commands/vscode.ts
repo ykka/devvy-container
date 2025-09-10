@@ -3,12 +3,49 @@ import { CONSTANTS } from '@config/constants';
 import * as docker from '@services/docker';
 import * as vscode from '@services/vscode';
 import { logger } from '@utils/logger';
+import * as prompt from '@utils/prompt';
 import { commandExists, run } from '@utils/shell';
 import chalk from 'chalk';
 import * as fs from 'fs-extra';
 
 export interface EditorOptions {
   folder?: string;
+}
+
+async function selectRepository(containerName: string): Promise<string> {
+  const reposDir = '/home/devvy/repos';
+
+  // List directories in the repos folder
+  logger.info('Checking available repositories...');
+  const listCommand = `docker exec ${containerName} ls -d ${reposDir}/*/ 2>/dev/null | xargs -r -n1 basename`;
+  const result = await run(listCommand, { silent: true });
+
+  if (!result.success || !result.stdout.trim()) {
+    logger.warn('No repositories found in /home/devvy/repos');
+    logger.info('Opening in the repos directory...');
+    return reposDir;
+  }
+
+  const repos = result.stdout.trim().split('\n').filter(Boolean);
+
+  if (repos.length === 1) {
+    const selectedRepo = `${reposDir}/${repos[0]}`;
+    logger.info(`Found one repository: ${chalk.cyan(repos[0])}`);
+    return selectedRepo;
+  }
+
+  // Add option to open repos directory itself
+  const choices = [
+    { name: '📁 Open repos directory (no specific project)', value: reposDir },
+    ...repos.map((repo) => ({
+      name: `📦 ${repo}`,
+      value: `${reposDir}/${repo}`,
+    })),
+  ];
+
+  const selected = await prompt.select('Which repository would you like to open?', choices);
+
+  return selected;
 }
 
 export async function cursorCommand(options: EditorOptions): Promise<void> {
@@ -39,7 +76,9 @@ export async function cursorCommand(options: EditorOptions): Promise<void> {
     logger.info(`Regenerating devcontainer configuration from template...`);
 
     const containerUser = CONSTANTS.CONTAINER_USER_NAME;
-    const workspaceFolder = options.folder || `/home/${containerUser}`;
+
+    // Select repository if not provided
+    const workspaceFolder = options.folder || (await selectRepository(containerName));
 
     // Check if extensions.txt exists
     const extensionsPath = path.join(process.cwd(), 'vscode-config', 'extensions.txt');
@@ -48,8 +87,11 @@ export async function cursorCommand(options: EditorOptions): Promise<void> {
       logger.info(`Run ${chalk.cyan('devvy sync')} first to import your ${editorName} extensions.`);
     }
 
-    // Create the attached container configuration
-    const { path: configPath, extensionCount } = await vscode.createAttachedContainerConfig(editorType);
+    // Create the attached container configuration with selected workspace
+    const { path: configPath, extensionCount } = await vscode.createAttachedContainerConfig(
+      editorType,
+      workspaceFolder,
+    );
 
     // Show verbose output
     logger.success(`✓ Regenerated devcontainer configuration from template`);
@@ -138,7 +180,9 @@ export async function vscodeCommand(options: EditorOptions): Promise<void> {
     logger.info(`Regenerating devcontainer configuration from template...`);
 
     const containerUser = CONSTANTS.CONTAINER_USER_NAME;
-    const workspaceFolder = options.folder || `/home/${containerUser}`;
+
+    // Select repository if not provided
+    const workspaceFolder = options.folder || (await selectRepository(containerName));
 
     // Check if extensions.txt exists
     const extensionsPath = path.join(process.cwd(), 'vscode-config', 'extensions.txt');
@@ -147,8 +191,11 @@ export async function vscodeCommand(options: EditorOptions): Promise<void> {
       logger.info(`Run ${chalk.cyan('devvy sync')} first to import your ${editorName} extensions.`);
     }
 
-    // Create the attached container configuration
-    const { path: configPath, extensionCount } = await vscode.createAttachedContainerConfig(editorType);
+    // Create the attached container configuration with selected workspace
+    const { path: configPath, extensionCount } = await vscode.createAttachedContainerConfig(
+      editorType,
+      workspaceFolder,
+    );
 
     // Show verbose output
     logger.success(`✓ Regenerated devcontainer configuration from template`);

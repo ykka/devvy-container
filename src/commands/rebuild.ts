@@ -80,55 +80,17 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
 
     startSpinner.succeed('Container started');
 
-    // Step 7: Wait for container to be ready by monitoring logs
-    logger.info('\n📋 Monitoring container initialization...');
-    logger.info(chalk.gray('Waiting for container to complete initialization...\n'));
-
-    const readyResult = await docker.waitForContainerReady(containerName, {
-      timeout: 60000, // 60 seconds timeout
-      onProgress: (line) => {
-        // Show initialization progress to user
-        if (line.startsWith('[INIT]')) {
-          logger.info(chalk.gray(`  ${line}`));
-        }
-      },
+    // Step 7: Initialize container and setup SSH
+    const initResult = await docker.initializeContainerWithSSH(containerName, {
+      timeout: 60000, // 60 seconds timeout for rebuild
+      isRebuild: true,
     });
 
-    if (!readyResult.ready) {
-      logger.error('\n❌ Container initialization failed!');
-
-      if (readyResult.error) {
-        logger.error(`Error: ${readyResult.error}`);
-      }
-
-      if (readyResult.logs.length > 0) {
-        logger.error('\nLast log entries before failure:');
-        for (const logLine of readyResult.logs.slice(-10)) {
-          logger.error(chalk.gray(`  ${logLine}`));
-        }
-      }
-
-      logger.info('\nTroubleshooting tips:');
-      logger.step('Check if all required files are present in ./secrets/');
-      logger.step('Ensure Docker has enough resources allocated');
-      logger.step('Try rebuilding with --no-cache flag');
-      logger.step(`Run ${chalk.cyan('devvy logs -f')} in another terminal for detailed output`);
-
+    if (!initResult.success) {
       process.exit(1);
     }
 
-    logger.success('\n✅ Container initialization completed successfully!');
-
-    // Step 8: Add container's new SSH key to host's known_hosts
-    console.log(`\n${chalk.blue("Adding container's new SSH key to host's known_hosts...")}`);
-    const sshAdded = await ssh.addContainerSSHKeyToHostKnownHosts('localhost', CONSTANTS.SSH.PORT);
-
-    if (!sshAdded) {
-      logger.warn("Container's SSH key was not added to host's known_hosts.");
-      logger.info("You will be prompted to verify the container's SSH key on first connection.");
-    }
-
-    // Step 9: Verify container is healthy
+    // Step 8: Verify container is healthy
     const healthSpinner = new Spinner('Verifying container health...');
     healthSpinner.start();
 

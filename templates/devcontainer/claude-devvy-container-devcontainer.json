@@ -18,9 +18,6 @@
   "remoteEnv": {
     "SHELL": "/bin/zsh"
   },
-  "postAttachCommand": "echo 'Welcome to Devvy Container! 🚀' && cd ~/repos && echo \"User: $(whoami)\" && echo \"Home: $HOME\" && echo \"Shell: $SHELL\"",
-  "attachRunArgs": [
-    "--name",
-    "claude-devvy-container"
-  ]
+  "postAttachCommand": "cd ~/repos",
+  "attachRunArgs": ["--name", "claude-devvy-container"]
 }

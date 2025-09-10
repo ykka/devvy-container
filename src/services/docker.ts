@@ -2,6 +2,7 @@ import type { Readable } from 'node:stream';
 
 import { CONSTANTS } from '@config/constants';
 import { logger } from '@utils/logger';
+import chalk from 'chalk';
 import Docker from 'dockerode';
 import { execa } from 'execa';
 
@@ -408,4 +409,90 @@ export async function waitForContainerReady(
         });
       });
   });
+}
+
+/**
+ * Initialize container and setup SSH access
+ * Shared method used by both start and rebuild commands
+ */
+export async function initializeContainerWithSSH(
+  containerName: string,
+  options: {
+    timeout?: number;
+    onProgress?: (line: string) => void;
+    isRebuild?: boolean;
+  } = {},
+): Promise<{ success: boolean; error?: string }> {
+  const { timeout = 30000, onProgress, isRebuild = false } = options;
+
+  // Wait for container to be fully ready
+  logger.info('\n📋 Waiting for container initialization...');
+  if (isRebuild) {
+    logger.info(chalk.gray('Waiting for container to complete initialization...\n'));
+  }
+
+  const readyResult = await waitForContainerReady(containerName, {
+    timeout,
+    onProgress: (line) => {
+      // Show initialization progress to user
+      if (line.startsWith('[INIT]')) {
+        if (isRebuild) {
+          logger.info(chalk.gray(`  ${line}`));
+        } else {
+          logger.debug(line);
+        }
+      }
+      if (onProgress) {
+        onProgress(line);
+      }
+    },
+  });
+
+  if (!readyResult.ready) {
+    if (isRebuild) {
+      logger.error('\n❌ Container initialization failed!');
+
+      if (readyResult.error) {
+        logger.error(`Error: ${readyResult.error}`);
+      }
+
+      if (readyResult.logs.length > 0) {
+        logger.error('\nLast log entries before failure:');
+        for (const logLine of readyResult.logs.slice(-10)) {
+          logger.error(chalk.gray(`  ${logLine}`));
+        }
+      }
+
+      logger.info('\nTroubleshooting tips:');
+      logger.step('Check if all required files are present in ./secrets/');
+      logger.step('Ensure Docker has enough resources allocated');
+      logger.step('Try rebuilding with --no-cache flag');
+      logger.step(`Run ${chalk.cyan('devvy logs -f')} in another terminal for detailed output`);
+    }
+
+    return {
+      success: false,
+      error: readyResult.error || 'Container initialization failed',
+    };
+  }
+
+  if (isRebuild) {
+    logger.success('\n✅ Container initialization completed successfully!');
+  }
+
+  // Add container's SSH key to host's known_hosts
+  const ssh = await import('./ssh.js');
+
+  if (isRebuild) {
+    console.log(`\n${chalk.blue("Adding container's new SSH key to host's known_hosts...")}`);
+  }
+
+  const sshAdded = await ssh.addContainerSSHKeyToHostKnownHosts('localhost', CONSTANTS.SSH.PORT);
+
+  if (!sshAdded) {
+    logger.warn("Container's SSH key was not added to host's known_hosts.");
+    logger.info("You will be prompted to verify the container's SSH key on first connection.");
+  }
+
+  return { success: true };
 }

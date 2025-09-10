@@ -98,6 +98,25 @@ export async function addContainerSSHKeyToHostKnownHosts(
   port = CONSTANTS.SSH.PORT,
 ): Promise<boolean> {
   try {
+    const hostPattern = port.toString() === '22' ? host : `[${host}]:${port}`;
+
+    // Check if key already exists in known_hosts
+    let existingKey = false;
+    try {
+      const { exitCode } = await execAsync('ssh-keygen', ['-F', hostPattern]);
+      existingKey = exitCode === 0;
+    } catch {
+      // Key doesn't exist, which is fine
+      existingKey = false;
+    }
+
+    if (existingKey) {
+      logger.info(`Container SSH key already exists in known_hosts for ${hostPattern}`);
+      // Remove the old key first to avoid duplicates
+      await removeContainerSSHKeyFromHostKnownHosts(host, port);
+      logger.debug('Removed old key to refresh with current container key');
+    }
+
     // Wait for SSH service to be ready with retries
     let sshReady = false;
     let attempts = 0;
@@ -137,12 +156,15 @@ export async function addContainerSSHKeyToHostKnownHosts(
       return false;
     }
 
-    console.log(`\nContainer's SSH key found for [${host}]:${port}`);
-    const shouldAdd = await prompt.confirm(`Add to host's ${knownHostsPath}?`, true);
+    // Don't prompt if we're refreshing an existing key
+    if (!existingKey) {
+      console.log(`\nContainer's SSH key found for [${host}]:${port}`);
+      const shouldAdd = await prompt.confirm(`Add to host's ${knownHostsPath}?`, true);
 
-    if (!shouldAdd) {
-      logger.info("Container's SSH key not added. You will need to accept it manually on first connection.");
-      return false;
+      if (!shouldAdd) {
+        logger.info("Container's SSH key not added. You will need to accept it manually on first connection.");
+        return false;
+      }
     }
 
     // Add to host's known_hosts
