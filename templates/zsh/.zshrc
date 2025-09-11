@@ -16,9 +16,9 @@ source $ZSH/oh-my-zsh.sh
 # Container detection and prompt customization
 # This runs after oh-my-zsh loads so we can modify the PROMPT
 if [[ -f /.dockerenv ]] || [[ -n "$DEVCONTAINER" ]] || grep -q 'docker\|lxc' /proc/1/cgroup 2>/dev/null; then
-    # We're in a container - add indicator to prompt
-    # You can customize the indicator here (change "devvy" to whatever you prefer)
-    PROMPT="%{$fg_bold[cyan]%}(🛡️devvy-container)%{$reset_color%} $PROMPT"
+    # We're in a container - custom prompt with directory and git info
+    PROMPT="%{$fg_bold[cyan]%}🛡️devvy%{$reset_color%} %{$fg[yellow]%}%c%{$reset_color%} "
+    PROMPT+='$(git_prompt_info)'
 fi
 
 # Display custom MOTD on login (only for interactive shells)
