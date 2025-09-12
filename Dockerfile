@@ -31,9 +31,36 @@ RUN apt-get update && apt-get install -y \
     jq \
     htop \
     postgresql-client \
-    # For potential Playwright support (headless Chrome)
-    chromium \
-    chromium-driver \
+    # Playwright dependencies for Chrome/Chromium
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libdbus-1-3 \
+    libxkbcommon0 \
+    libatspi2.0-0 \
+    libx11-6 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libxcb1 \
+    libasound2 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2 \
+    # Fonts for Playwright
+    fonts-liberation \
+    fonts-ipafont-gothic \
+    fonts-wqy-zenhei \
+    fonts-thai-tlwg \
+    fonts-kacst \
+    fonts-freefont-ttf \
+    # Display server for headless operation
     xvfb \
     && rm -rf /var/lib/apt/lists/*
 
@@ -97,6 +124,13 @@ RUN npm install -g typescript @types/node tsx nodemon @anthropic-ai/claude-code
 # Install Python packages for Neovim
 RUN pip3 install --user --break-system-packages pynvim
 
+# Install Playwright and its browsers as root (before switching to devvy)
+USER root
+RUN npm install -g playwright && \
+    npx -y playwright install chromium --with-deps && \
+    npx -y playwright install chrome --with-deps || true
+USER devvy
+
 # Install oh-my-zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
@@ -120,6 +154,9 @@ RUN touch ~/.ssh/known_hosts && \
 
 # Environment variables
 # PROJECTS_PATH will be set dynamically from the host's .env file
+# Playwright browser path configuration
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0
 
 # Switch back to root for runtime setup
 USER root
