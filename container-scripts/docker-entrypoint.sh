@@ -124,6 +124,17 @@ fi
 echo "[INIT] Creating VS Code/Cursor server directories..."
 su - devvy -c 'mkdir -p ~/.vscode-server ~/.cursor-server'
 
+# Copy VNC scripts and make them executable
+echo "[INIT] Setting up VNC scripts..."
+if [ -f /usr/local/bin/start-vnc.sh ]; then
+    chmod +x /usr/local/bin/start-vnc.sh
+    ln -sf /usr/local/bin/start-vnc.sh /usr/local/bin/start-vnc
+fi
+if [ -f /usr/local/bin/stop-vnc.sh ]; then
+    chmod +x /usr/local/bin/stop-vnc.sh
+    ln -sf /usr/local/bin/stop-vnc.sh /usr/local/bin/stop-vnc
+fi
+
 # Skip permission changes on mounted directories - they inherit from host
 
 # Start SSH daemon
