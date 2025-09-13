@@ -6,6 +6,7 @@ import { setupCommand } from '@commands/setup';
 import { startCommand } from '@commands/start';
 import { statusCommand } from '@commands/status';
 import { stopCommand } from '@commands/stop';
+import { vnc } from '@commands/vnc';
 import { cursorCommand, vscodeCommand } from '@commands/vscode';
 import { CONSTANTS } from '@config/constants';
 import { logger } from '@utils/logger';
@@ -78,6 +79,7 @@ program
 
 program
   .command('rebuild')
+  .alias('build')
   .description('Rebuild the container image')
   .option('--no-cache', 'Build without cache')
   .option('-f, --force', 'Force rebuild even if container is running')
@@ -118,6 +120,13 @@ program
   .option('-f, --folder <path>', 'Folder to open in the container (default: /home/devvy)')
   .action(async (options) => {
     await vscodeCommand(options);
+  });
+
+program
+  .command('vnc')
+  .description('Show VNC connection instructions for browser monitoring')
+  .action(async () => {
+    await vnc();
   });
 
 program.addHelpText(

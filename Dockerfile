@@ -1,67 +1,93 @@
 # syntax=docker/dockerfile:1
 FROM node:24-bookworm-slim AS base
 
-# Install system dependencies including ImageMagick
+# Core system utilities (rarely change)
 RUN apt-get update && apt-get install -y \
     curl \
-    git \
     wget \
     sudo \
+    locales \
+    && rm -rf /var/lib/apt/lists/*
+
+# Version control and essential dev tools (rarely change)
+RUN apt-get update && apt-get install -y \
+    git \
+    build-essential \
+    cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+# Network and SSH tools (rarely change)
+RUN apt-get update && apt-get install -y \
     openssh-server \
     mosh \
     iptables \
     ipset \
     libcap2-bin \
     dnsutils \
-    locales \
-    fzf \
-    build-essential \
-    cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python ecosystem (occasionally change)
+RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+# Shell and terminal tools (occasionally change)
+RUN apt-get update && apt-get install -y \
+    zsh \
+    tmux \
+    fzf \
+    && rm -rf /var/lib/apt/lists/*
+
+# Development utilities (frequently change)
+RUN apt-get update && apt-get install -y \
     ripgrep \
     fd-find \
+    jq \
+    btop \
+    imagemagick \
     xclip \
     luarocks \
     libmsgpack-dev \
-    zsh \
-    tmux \
-    imagemagick \
-    jq \
-    htop \
+    && rm -rf /var/lib/apt/lists/*
+
+# Database clients (occasionally change)
+RUN apt-get update && apt-get install -y \
     postgresql-client \
-    # Playwright dependencies for Chrome/Chromium
-    libnss3 \
-    libnspr4 \
-    libatk1.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Chrome and VNC dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    xvfb \
+    x11vnc \
+    fluxbox \
+    fonts-liberation \
+    libasound2 \
     libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libdbus-1-3 \
-    libxkbcommon0 \
+    libatk1.0-0 \
     libatspi2.0-0 \
-    libx11-6 \
+    libcups2 \
+    libdbus-1-3 \
+    libdrm2 \
+    libgbm1 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
     libxcomposite1 \
     libxdamage1 \
-    libxext6 \
     libxfixes3 \
+    libxkbcommon0 \
     libxrandr2 \
-    libgbm1 \
-    libxcb1 \
-    libasound2 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libasound2 \
-    # Fonts for Playwright
-    fonts-liberation \
-    fonts-ipafont-gothic \
-    fonts-wqy-zenhei \
-    fonts-thai-tlwg \
-    fonts-kacst \
-    fonts-freefont-ttf \
-    # Display server for headless operation
-    xvfb \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Google Chrome
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure locales for UTF-8 support (required for mosh)
@@ -124,12 +150,9 @@ RUN npm install -g typescript @types/node tsx nodemon @anthropic-ai/claude-code
 # Install Python packages for Neovim
 RUN pip3 install --user --break-system-packages pynvim
 
-# Install Playwright and its browsers as root (before switching to devvy)
-USER root
-RUN npm install -g playwright && \
-    npx -y playwright install chromium --with-deps && \
-    npx -y playwright install chrome --with-deps || true
-USER devvy
+# VNC configuration directory
+RUN mkdir -p /home/devvy/.vnc && \
+    chown -R ${HOST_UID}:${HOST_GID} /home/devvy/.vnc
 
 # Install oh-my-zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
@@ -154,9 +177,8 @@ RUN touch ~/.ssh/known_hosts && \
 
 # Environment variables
 # PROJECTS_PATH will be set dynamically from the host's .env file
-# Playwright browser path configuration
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0
+# Display configuration for Chrome/VNC
+ENV DISPLAY=:99
 
 # Switch back to root for runtime setup
 USER root
@@ -165,6 +187,8 @@ USER root
 COPY container-scripts/init-firewall.sh /usr/local/bin/init-firewall.sh
 COPY container-scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY container-scripts/devvy-motd.sh /usr/local/bin/devvy-motd.sh
+COPY container-scripts/start-vnc.sh /usr/local/bin/start-vnc.sh
+COPY container-scripts/stop-vnc.sh /usr/local/bin/stop-vnc.sh
 RUN chmod +x /usr/local/bin/*.sh
 
 # Disable default MOTD and setup custom welcome message
@@ -176,8 +200,22 @@ RUN rm -f /etc/motd /etc/update-motd.d/* && \
 # Expose ports for various services:
 # 22            - SSH access to the container
 # 60000-60010/udp - UDP ports for development tools or custom services (e.g., debugging, tunnels)
-# 3000-3010     - Common range for web app development servers (e.g., Node.js, React, etc.)
-EXPOSE 22 60000-60010/udp 3000-3010
+# 3000-3010     - Common range for web app development servers (e.g., Node.js, React, Vue, etc.)
+# 443           - HTTPS/TLS connections
+# 8443          - Alternative HTTPS port for development
+# 8080-8090     - WebSocket connections and alternative HTTP servers
+# 4200          - Angular dev server
+# 5000          - Flask/Python web servers
+# 5173          - Vite dev server
+# 5432          - PostgreSQL database
+# 6379          - Redis cache/database
+# 8000          - Django/Python alternate server
+# 9000          - PHP-FPM
+# 9229          - Node.js debugger
+# 27017         - MongoDB database
+# 3306          - MySQL/MariaDB database
+# 5900          - VNC server for browser monitoring
+EXPOSE 22 60000-60010/udp 3000-3010 443 8443 8080-8090 4200 5000 5173 5432 6379 8000 9000 9229 27017 3306 5900
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D"]

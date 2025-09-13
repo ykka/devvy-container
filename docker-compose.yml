@@ -16,7 +16,21 @@ services:
     ports:
       - "2222:22" # SSH
       - "60000-60010:60000-60010/udp" # Mosh
-      - "3000-3010:3000-3010" # Dev servers
+      - "3000-3010:3000-3010" # Dev servers (Node.js, React, Vue, etc.)
+      - "443:443" # HTTPS/TLS
+      - "8443:8443" # Alternative HTTPS port
+      - "8080-8090:8080-8090" # WebSocket and alternative HTTP servers
+      - "4200:4200" # Angular dev server
+      - "5000:5000" # Flask/Python web servers
+      - "5173:5173" # Vite dev server
+      - "5432:5432" # PostgreSQL database
+      - "6379:6379" # Redis cache/database
+      - "8000:8000" # Django/Python alternate server
+      - "9000:9000" # PHP-FPM
+      - "9229:9229" # Node.js debugger
+      - "27017:27017" # MongoDB database
+      - "3306:3306" # MySQL/MariaDB database
+      - "5900:5900" # VNC server for browser monitoring
     volumes:
       # Projects directory from configuration
       - type: bind
@@ -74,9 +88,8 @@ services:
       LINEAR_API_KEY: ${LINEAR_API_KEY:-}
       INSTALL_LAZYVIM: ${INSTALL_LAZYVIM:-false}
       FIREWALL_ALLOWED_DOMAINS: ${FIREWALL_ALLOWED_DOMAINS:-}
-      PLAYWRIGHT_BROWSERS_PATH: /home/devvy/.cache/ms-playwright
-      # X11 forwarding for GUI applications
-      DISPLAY: host.docker.internal:0
+      # Display for VNC/Chrome
+      DISPLAY: :99
     networks:
       - claude-network
     restart: unless-stopped

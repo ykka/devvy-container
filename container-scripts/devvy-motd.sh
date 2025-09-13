@@ -56,6 +56,7 @@ echo ""
 
 # Quick Commands
 echo -e "${YELLOW}⚡ Quick Commands:${RESET}"
+echo -e "   ${MAGENTA}btop${RESET}              - System resource monitor"
 echo -e "   ${MAGENTA}tmux${RESET}              - Start terminal multiplexer"
 echo -e "   ${MAGENTA}nvim${RESET}              - Launch Neovim editor"
 echo -e "   ${MAGENTA}cd ~/repos${RESET}        - Go to projects directory"

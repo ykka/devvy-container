@@ -34,4 +34,5 @@ alias zshconfig="nvim ~/.zshrc"
 alias ohmyzsh="nvim ~/.oh-my-zsh"
 alias vim="nvim"
 alias claudy="claude --dangerously-skip-permissions"
+alias top="btop"
 
