@@ -142,8 +142,7 @@ RUN pip3 install --user --break-system-packages pynvim
 # VNC configuration for XFCE desktop
 RUN mkdir -p /home/devvy/.vnc && \
     printf '#!/bin/sh\nunset SESSION_MANAGER\nunset DBUS_SESSION_BUS_ADDRESS\nstartxfce4' > /home/devvy/.vnc/xstartup && \
-    chmod +x /home/devvy/.vnc/xstartup && \
-    chown -R ${HOST_UID}:${HOST_GID} /home/devvy/.vnc
+    chmod +x /home/devvy/.vnc/xstartup
 
 # Install oh-my-zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
