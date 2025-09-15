@@ -57,6 +57,23 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
+# XFCE Desktop and TigerVNC for browser monitoring (browser-use-mcp-server approach)
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y \
+    xfce4 \
+    xfce4-terminal \
+    dbus-x11 \
+    tigervnc-standalone-server \
+    tigervnc-tools \
+    fonts-freefont-ttf \
+    fonts-ipafont-gothic \
+    fonts-wqy-zenhei \
+    fonts-thai-tlwg \
+    fonts-kacst \
+    fonts-symbola \
+    fonts-noto-color-emoji && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Configure locales for UTF-8 support (required for mosh)
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
