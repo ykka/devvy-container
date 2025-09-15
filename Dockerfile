@@ -57,38 +57,6 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Chrome and VNC dependencies
-RUN apt-get update && apt-get install -y \
-    wget \
-    gnupg \
-    xvfb \
-    x11vnc \
-    fluxbox \
-    fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libatspi2.0-0 \
-    libcups2 \
-    libdbus-1-3 \
-    libdrm2 \
-    libgbm1 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxkbcommon0 \
-    libxrandr2 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Google Chrome
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
 
 # Configure locales for UTF-8 support (required for mosh)
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
@@ -150,10 +118,6 @@ RUN npm install -g typescript @types/node tsx nodemon @anthropic-ai/claude-code
 # Install Python packages for Neovim
 RUN pip3 install --user --break-system-packages pynvim
 
-# VNC configuration directory
-RUN mkdir -p /home/devvy/.vnc && \
-    chown -R ${HOST_UID}:${HOST_GID} /home/devvy/.vnc
-
 # Install oh-my-zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
@@ -177,8 +141,6 @@ RUN touch ~/.ssh/known_hosts && \
 
 # Environment variables
 # PROJECTS_PATH will be set dynamically from the host's .env file
-# Display configuration for Chrome/VNC
-ENV DISPLAY=:99
 
 # Switch back to root for runtime setup
 USER root
@@ -187,8 +149,6 @@ USER root
 COPY container-scripts/init-firewall.sh /usr/local/bin/init-firewall.sh
 COPY container-scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY container-scripts/devvy-motd.sh /usr/local/bin/devvy-motd.sh
-COPY container-scripts/start-vnc.sh /usr/local/bin/start-vnc.sh
-COPY container-scripts/stop-vnc.sh /usr/local/bin/stop-vnc.sh
 RUN chmod +x /usr/local/bin/*.sh
 
 # Disable default MOTD and setup custom welcome message
