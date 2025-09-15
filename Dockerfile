@@ -121,6 +121,10 @@ RUN git clone --depth 1 --branch stable https://github.com/neovim/neovim.git /tm
     make install && \
     rm -rf /tmp/neovim
 
+# Install Playwright and Chromium browser as root (needs sudo privileges)
+RUN npm install -g playwright && \
+    npx playwright install --with-deps chromium
+
 # Switch to devvy user
 USER devvy
 WORKDIR /home/devvy
@@ -131,10 +135,6 @@ RUN mkdir -p ~/.npm-global && \
 
 # Install Node.js tools globally as devvy user
 RUN npm install -g typescript @types/node tsx nodemon @anthropic-ai/claude-code
-
-# Install Playwright with Chromium browser
-RUN npm install -g playwright && \
-    npx playwright install --with-deps --no-shell chromium
 
 # Install Python packages for Neovim
 RUN pip3 install --user --break-system-packages pynvim
