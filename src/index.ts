@@ -1,5 +1,6 @@
 import { cleanupCommand } from '@commands/cleanup';
 import { connectCommand } from '@commands/connect';
+import { connectAsRootCommand } from '@commands/connect-as-root';
 import { logsCommand } from '@commands/logs';
 import { rebuildCommand } from '@commands/rebuild';
 import { setupCommand } from '@commands/setup';
@@ -54,6 +55,15 @@ program
   .option('-t, --tmux', 'Connect to tmux session')
   .action(async (options) => {
     await connectCommand(options);
+  });
+
+program
+  .command('connect-as-root')
+  .description('Connect to the development container as root user')
+  .option('-m, --mosh', 'Use mosh instead of SSH')
+  .option('-t, --tmux', 'Connect to tmux session')
+  .action(async (options) => {
+    await connectAsRootCommand(options);
   });
 
 program

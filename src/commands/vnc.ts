@@ -31,16 +31,16 @@ export async function vnc(): Promise<void> {
   console.log('');
   console.log(chalk.green('Option A: macOS Screen Sharing (Recommended)'));
   console.log('  1. Open Finder');
-  console.log('  2. Press ' + chalk.bold('Cmd+K') + ' (Connect to Server)');
-  console.log('  3. Enter: ' + chalk.cyan('vnc://localhost:5900'));
-  console.log('  4. Password: ' + chalk.cyan('devvy'));
+  console.log(`  2. Press ${chalk.bold('Cmd+K')} (Connect to Server)`);
+  console.log(`  3. Enter: ${chalk.cyan('vnc://localhost:5900')}`);
+  console.log(`  4. Password: ${chalk.cyan('devvy')}`);
   console.log('');
 
   console.log(chalk.green('Option B: VNC Client'));
   console.log('  Use any VNC client (RealVNC, TigerVNC, etc.)');
-  console.log('  • Host: ' + chalk.cyan('localhost'));
-  console.log('  • Port: ' + chalk.cyan('5900'));
-  console.log('  • Password: ' + chalk.cyan('devvy'));
+  console.log(`  • Host: ${chalk.cyan('localhost')}`);
+  console.log(`  • Port: ${chalk.cyan('5900')}`);
+  console.log(`  • Password: ${chalk.cyan('devvy')}`);
   console.log('');
 
   console.log(chalk.yellow('Step 3: Launch Chrome (inside container)'));
