@@ -87,9 +87,9 @@ ARG HOST_UID=1000
 ARG HOST_GID=1000
 
 # Create devvy user with host-matching UID/GID
-# If the GID already exists, use that group; otherwise create a new one
-RUN (getent group ${HOST_GID} || groupadd -g ${HOST_GID} devvy) && \
-    useradd -u ${HOST_UID} -g ${HOST_GID} -m -s /bin/zsh devvy
+# Always create a group named 'devvy' with the specified GID
+RUN groupadd -f -g ${HOST_GID} devvy && \
+    useradd -u ${HOST_UID} -g devvy -m -s /bin/zsh devvy
 
 # Configure SSH for remote access (for mosh/ssh from host)
 RUN mkdir /var/run/sshd && \
