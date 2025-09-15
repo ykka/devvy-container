@@ -124,16 +124,21 @@ fi
 echo "[INIT] Creating VS Code/Cursor server directories..."
 su - devvy -c 'mkdir -p ~/.vscode-server ~/.cursor-server'
 
-# Copy VNC scripts and make them executable
-echo "[INIT] Setting up VNC scripts..."
-if [ -f /usr/local/bin/start-vnc.sh ]; then
-    chmod +x /usr/local/bin/start-vnc.sh
-    ln -sf /usr/local/bin/start-vnc.sh /usr/local/bin/start-vnc
+# Start VNC server automatically (like browser-use-mcp-server does)
+echo "[INIT] Starting VNC server for browser monitoring..."
+
+# Setup VNC password if not exists
+if [ ! -f /home/devvy/.vnc/passwd ]; then
+    mkdir -p /home/devvy/.vnc
+    echo "devvy" | vncpasswd -f > /home/devvy/.vnc/passwd
+    chmod 600 /home/devvy/.vnc/passwd
+    chown -R devvy:devvy /home/devvy/.vnc
 fi
-if [ -f /usr/local/bin/stop-vnc.sh ]; then
-    chmod +x /usr/local/bin/stop-vnc.sh
-    ln -sf /usr/local/bin/stop-vnc.sh /usr/local/bin/stop-vnc
-fi
+
+# Start VNC server as devvy user on display :0 (port 5900)
+su - devvy -c "vncserver -depth 24 -geometry 1920x1080 -localhost no -PasswordFile /home/devvy/.vnc/passwd :0" 2>/dev/null || true
+
+echo "[INIT] VNC server started on port 5900 (connect with vnc://localhost:5900, password: devvy)"
 
 # Skip permission changes on mounted directories - they inherit from host
 

@@ -168,6 +168,8 @@ RUN touch ~/.ssh/known_hosts && \
 
 # Environment variables
 # PROJECTS_PATH will be set dynamically from the host's .env file
+# Display configuration for VNC
+ENV DISPLAY=:0
 
 # Switch back to root for runtime setup
 USER root
