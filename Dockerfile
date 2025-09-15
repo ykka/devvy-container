@@ -132,8 +132,18 @@ RUN mkdir -p ~/.npm-global && \
 # Install Node.js tools globally as devvy user
 RUN npm install -g typescript @types/node tsx nodemon @anthropic-ai/claude-code
 
+# Install Playwright with Chromium browser
+RUN npm install -g playwright && \
+    npx playwright install --with-deps --no-shell chromium
+
 # Install Python packages for Neovim
 RUN pip3 install --user --break-system-packages pynvim
+
+# VNC configuration for XFCE desktop
+RUN mkdir -p /home/devvy/.vnc && \
+    printf '#!/bin/sh\nunset SESSION_MANAGER\nunset DBUS_SESSION_BUS_ADDRESS\nstartxfce4' > /home/devvy/.vnc/xstartup && \
+    chmod +x /home/devvy/.vnc/xstartup && \
+    chown -R ${HOST_UID}:${HOST_GID} /home/devvy/.vnc
 
 # Install oh-my-zsh
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
