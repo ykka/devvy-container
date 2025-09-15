@@ -158,8 +158,7 @@ COPY --chown=${HOST_UID}:${HOST_GID} templates/zsh/.zshrc /home/devvy/.zshrc
 COPY --chown=${HOST_UID}:${HOST_GID} templates/tmux/tmux.conf /home/devvy/.tmux.conf
 
 # Install TPM (Tmux Plugin Manager) for the devvy user
-RUN git clone https://github.com/tmux-plugins/tpm /home/devvy/.tmux/plugins/tpm && \
-    chown -R ${HOST_UID}:${HOST_GID} /home/devvy/.tmux
+RUN git clone https://github.com/tmux-plugins/tpm /home/devvy/.tmux/plugins/tpm
 
 # Setup SSH for GitHub (will be populated by entrypoint)
 RUN touch ~/.ssh/known_hosts && \
