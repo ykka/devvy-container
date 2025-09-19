@@ -59,8 +59,7 @@ program
 
 program
   .command('connect-as-root')
-  .description('Connect to the development container as root user')
-  .option('-m, --mosh', 'Use mosh instead of SSH')
+  .description('Connect to the development container as root user via Docker exec')
   .option('-t, --tmux', 'Connect to tmux session')
   .action(async (options) => {
     await connectAsRootCommand(options);
