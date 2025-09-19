@@ -64,7 +64,7 @@ vncpasswd
 If VNC doesn't connect:
 1. Ensure port 5900 is exposed in docker-compose.yml
 2. Check if VNC is running: `ps aux | grep vnc`
-3. Check logs: `docker logs claude-devvy-container`
+3. Check logs: `docker logs devvy-container`
 
 If Chromium doesn't launch:
 1. Ensure DISPLAY is set: `echo $DISPLAY` (should show `:0`)

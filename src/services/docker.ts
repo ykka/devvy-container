@@ -345,7 +345,7 @@ export async function waitForContainerReady(
   } = {},
 ): Promise<{ ready: boolean; logs: string[]; error?: string }> {
   const {
-    readyMarker = '--CLAUDE-DEVVY-CONTAINER-READY--',
+    readyMarker = '--DEVVY-CONTAINER-READY--',
     errorPatterns = ['[INIT:ERROR]', 'ERROR:', 'Failed to', 'Permission denied', 'timeout'],
     timeout = 60000,
     onProgress,

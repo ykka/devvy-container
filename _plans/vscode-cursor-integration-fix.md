@@ -6,7 +6,7 @@
 Fix VS Code and Cursor to properly connect to the devvy container as the `devvy` user (not root) by dynamically creating attached container configurations with extensions from `vscode-config/extensions.txt`.
 
 ## Core Concept
-- **Template**: Use `templates/devcontainer/claude-devvy-container-devcontainer.json` as base
+- **Template**: Use `templates/devcontainer/devvy-container-devcontainer.json` as base
 - **Extensions**: Dynamically inject from `vscode-config/extensions.txt` (imported during sync)
 - **Timing**: Create configs only when `devvy cursor` or `devvy vscode` is run
 - **Location**: Copy to correct Application Support directories with clear user notification
@@ -16,12 +16,12 @@ Fix VS Code and Cursor to properly connect to the devvy container as the `devvy`
 ### Phase 1: Update VS Code Service (`src/services/vscode.ts`)
 
 #### 1. Fix `getAttachedContainerConfigPath`
-- For Cursor on macOS: `~/Library/Application Support/Cursor/User/globalStorage/anysphere.remote-containers/imageConfigs/claude-devvy-container-devcontainer.json`
-- For VS Code on macOS: `~/Library/Application Support/Code/User/globalStorage/ms-vscode-remote.remote-containers/imageConfigs/claude-devvy-container-devcontainer.json`
+- For Cursor on macOS: `~/Library/Application Support/Cursor/User/globalStorage/anysphere.remote-containers/imageConfigs/devvy-container-devcontainer.json`
+- For VS Code on macOS: `~/Library/Application Support/Code/User/globalStorage/ms-vscode-remote.remote-containers/imageConfigs/devvy-container-devcontainer.json`
 - Include proper platform detection for future Linux/Windows support
 
 #### 2. Add `prepareAttachedContainerConfig` function
-- Read template from `templates/devcontainer/claude-devvy-container-devcontainer.json`
+- Read template from `templates/devcontainer/devvy-container-devcontainer.json`
 - Read extensions from `vscode-config/extensions.txt`
 - Parse template JSON
 - Replace `customizations.vscode.extensions` array with extensions from txt file
@@ -104,7 +104,7 @@ $ devvy sync
 ```bash
 $ devvy cursor
 Configuring Cursor to connect as 'devvy' user...
-✓ Creating configuration at: /Users/username/Library/Application Support/Cursor/User/globalStorage/anysphere.remote-containers/imageConfigs/claude-devvy-container-devcontainer.json
+✓ Creating configuration at: /Users/username/Library/Application Support/Cursor/User/globalStorage/anysphere.remote-containers/imageConfigs/devvy-container-devcontainer.json
 ✓ Included 36 extensions from vscode-config/extensions.txt
 ✓ Configured to connect as user: devvy
 ✓ Workspace folder: /home/devvy
@@ -182,7 +182,7 @@ Launching Cursor and attaching to container...
 - ✅ Fixed `getAttachedContainerConfigPath` to use correct filename and extension ID
   - Cursor uses `anysphere.remote-containers`
   - VS Code uses `ms-vscode-remote.remote-containers`
-  - Both use filename `claude-devvy-container-devcontainer.json`
+  - Both use filename `devvy-container-devcontainer.json`
 - ✅ Added `prepareAttachedContainerConfig` function to load template and inject extensions
 - ✅ Updated `createAttachedContainerConfig` to return path and extension count
 - ✅ Added `customizations` field to `AttachedContainerConfig` interface

@@ -6,8 +6,8 @@ services:
       args:
         HOST_UID: ${HOST_UID:-1000}
         HOST_GID: ${HOST_GID:-1000}
-    container_name: claude-devvy-container
-    hostname: claude-devvy-container
+    container_name: devvy-container
+    hostname: devvy-container
     cap_add:
       - NET_ADMIN # For firewall rules
       - NET_RAW # For iptables
@@ -91,11 +91,11 @@ services:
       # Display for VNC/Chrome
       DISPLAY: :99
     networks:
-      - claude-network
+      - devvy-network
     restart: unless-stopped
 
 networks:
-  claude-network:
+  devvy-network:
     driver: bridge
 
 volumes:

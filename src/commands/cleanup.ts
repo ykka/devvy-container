@@ -68,7 +68,7 @@ export async function cleanupCommand(options: CleanupOptions): Promise<void> {
   }
 
   const containerName = CONSTANTS.DOCKER.CONTAINER_NAME;
-  const imageName = `claude-devvy-container_${containerName}`;
+  const imageName = `devvy-container_${containerName}`;
 
   const cleanupActions: CleanupAction[] = [
     {
@@ -102,7 +102,7 @@ export async function cleanupCommand(options: CleanupOptions): Promise<void> {
 
         for (const vol of volumes) {
           try {
-            await run(`docker volume rm "claude-devvy-container_${vol}" 2>/dev/null || true`);
+            await run(`docker volume rm "devvy-container_${vol}" 2>/dev/null || true`);
           } catch {
             // Ignore errors for non-existent volumes
           }
@@ -196,8 +196,8 @@ async function performFullCleanup(): Promise<void> {
 
   try {
     await run('docker compose down -v 2>/dev/null || true');
-    await run('docker rm -f claude-devvy-container 2>/dev/null || true');
-    await run('docker rmi claude-devvy-container_devcontainer 2>/dev/null || true');
+    await run('docker rm -f devvy-container 2>/dev/null || true');
+    await run('docker rmi devvy-container_devcontainer 2>/dev/null || true');
 
     await ssh.cleanupHostSSHKeys();
 
@@ -248,10 +248,9 @@ async function getDockerResourceSize(containerName: string, imageName: string): 
 
 async function getVolumeSize(): Promise<string> {
   try {
-    const { stdout } = await run(
-      `docker system df -v | grep claude-devvy-container | awk '{sum+=$4} END {print sum}'`,
-      { silent: true },
-    );
+    const { stdout } = await run(`docker system df -v | grep devvy-container | awk '{sum+=$4} END {print sum}'`, {
+      silent: true,
+    });
 
     if (stdout?.trim()) {
       const sizeInBytes = Number.parseInt(stdout.trim(), 10);

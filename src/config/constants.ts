@@ -7,8 +7,8 @@ export const CONSTANTS = {
   // Docker configuration
   DOCKER: {
     COMPOSE_FILE: 'docker-compose.yml',
-    PROJECT_NAME: 'claude-devvy-container',
-    CONTAINER_NAME: 'claude-devvy-container',
+    PROJECT_NAME: 'devvy-container',
+    CONTAINER_NAME: 'devvy-container',
   },
 
   // Container user

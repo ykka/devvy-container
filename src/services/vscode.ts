@@ -28,7 +28,7 @@ export interface AttachedContainerConfig {
 function getAttachedContainerConfigPath(editorType: EditorType): string {
   const homeDir = os.homedir();
   const platform = process.platform;
-  const configFilename = 'claude-devvy-container-devcontainer.json';
+  const configFilename = 'devvy-container-devcontainer.json';
 
   const globalStorageDir =
     editorType === 'cursor'
@@ -97,12 +97,7 @@ export async function detectEditor(): Promise<EditorType | null> {
  * Prepare attached container configuration from template
  */
 async function prepareAttachedContainerConfig(workspaceFolder?: string): Promise<AttachedContainerConfig> {
-  const templatePath = path.join(
-    process.cwd(),
-    'templates',
-    'devcontainer',
-    'claude-devvy-container-devcontainer.json',
-  );
+  const templatePath = path.join(process.cwd(), 'templates', 'devcontainer', 'devvy-container-devcontainer.json');
 
   // Read the template
   const template = await fs.readJson(templatePath);

@@ -3,7 +3,7 @@ import { logger } from '@utils/logger';
 import chalk from 'chalk';
 
 export async function vnc(): Promise<void> {
-  const isRunning = await docker.isContainerRunning('claude-devvy-container');
+  const isRunning = await docker.isContainerRunning('devvy-container');
 
   if (!isRunning) {
     logger.warn('Container is not running. Start it first with:');

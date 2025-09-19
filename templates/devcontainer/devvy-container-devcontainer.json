@@ -19,5 +19,5 @@
     "SHELL": "/bin/zsh"
   },
   "postAttachCommand": "cd ~/repos",
-  "attachRunArgs": ["--name", "claude-devvy-container"]
+  "attachRunArgs": ["--name", "devvy-container"]
 }

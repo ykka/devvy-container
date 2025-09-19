@@ -3,7 +3,7 @@
 ## Terminology
 **IMPORTANT**: Throughout the codebase, use these terms consistently:
 - **local machine** - The host Mac that runs Docker containers, the machine from which we SSH into the container
-- **container** - The Docker container itself (claude-devvy-container)
+- **container** - The Docker container itself (devvy-container)
 
 ## Project Overview
 This is a Docker-based development environment CLI that's being migrated from bash scripts to TypeScript for improved maintainability, type safety, and developer experience.

@@ -156,7 +156,7 @@ docker exec -it devvy-container btop
 
 No new files are created. Updates to existing files:
 ```
-claude-devvy-container/
+devvy-container/
 ├── container-scripts/
 │   └── devvy-motd.sh          # UPDATE: Add btop to Quick Commands
 ├── templates/

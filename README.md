@@ -20,8 +20,8 @@ Running Claude Code directly on your host machine gives AI unrestricted system a
 
 ```bash
 # Clone repository
-git clone <your-repo-url> claude-devvy-container
-cd claude-devvy-container
+git clone <your-repo-url> devvy-container
+cd devvy-container
 
 # Install CLI
 npm install
@@ -78,14 +78,14 @@ This command:
 1. Start the container: `devvy start`
 2. Open VS Code/Cursor
 3. Press `Cmd+Shift+P` → "Dev Containers: Attach to Running Container"
-4. Select `claude-devvy-container`
+4. Select `devvy-container`
 
 Note: The container includes a `.devcontainer/devcontainer.json` that automatically configures VS Code to connect as the `devvy` user.
 
 ## Project Structure
 
 ```
-claude-devvy-container/
+devvy-container/
 ├── src/              # TypeScript CLI source
 │   ├── commands/     # CLI command implementations
 │   ├── services/     # Business logic
