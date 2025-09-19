@@ -136,6 +136,11 @@ su - devvy -c 'mkdir -p ~/.vscode-server ~/.cursor-server'
 # Start VNC server automatically (like browser-use-mcp-server does)
 echo "[INIT] Starting VNC server for browser monitoring..."
 
+# Clean up any stale VNC locks from previous runs
+echo "[INIT] Cleaning up stale VNC locks if present..."
+rm -f /tmp/.X0-lock /tmp/.X11-unix/X0 2>/dev/null || true
+rm -f /home/devvy/.vnc/*.pid /home/devvy/.vnc/*.log 2>/dev/null || true
+
 # Setup VNC password if not exists
 if [ ! -f /home/devvy/.vnc/passwd ]; then
   mkdir -p /home/devvy/.vnc
@@ -145,9 +150,31 @@ if [ ! -f /home/devvy/.vnc/passwd ]; then
 fi
 
 # Start VNC server as devvy user on display :0 (port 5900)
-su - devvy -c "vncserver -depth 24 -geometry 1920x1080 -localhost no -PasswordFile /home/devvy/.vnc/passwd :0" 2>/dev/null || true
+echo "[INIT] Attempting to start VNC server on display :0..."
+if ! su - devvy -c "vncserver -depth 24 -geometry 1920x1080 -localhost no -PasswordFile /home/devvy/.vnc/passwd :0" 2>&1; then
+  echo "[INIT:ERROR] Failed to start VNC server!"
+  echo "[INIT:ERROR] This is required for browser monitoring functionality."
 
-echo "[INIT] VNC server started on port 5900 (connect with vnc://localhost:5900, password: devvy)"
+  # Try harder cleanup and retry
+  echo "[INIT] Performing deeper cleanup and retrying..."
+  pkill -f "Xtigervnc" 2>/dev/null || true
+  sleep 1
+  rm -rf /tmp/.X* 2>/dev/null || true
+
+  if ! su - devvy -c "vncserver -depth 24 -geometry 1920x1080 -localhost no -PasswordFile /home/devvy/.vnc/passwd :0" 2>&1; then
+    echo "[INIT:ERROR] VNC server failed to start after cleanup attempt."
+    echo "[INIT:ERROR] Check VNC logs in /home/devvy/.vnc/ for details."
+    exit 1
+  fi
+fi
+
+# Verify VNC is actually running
+if ! pgrep -f "Xtigervnc :0" >/dev/null; then
+  echo "[INIT:ERROR] VNC server process not found after startup!"
+  exit 1
+fi
+
+echo "[INIT] VNC server started successfully on port 5900 (connect with vnc://localhost:5900, password: devvy)"
 
 # Skip permission changes on mounted directories - they inherit from host
 

@@ -52,9 +52,54 @@ RUN apt-get update && apt-get install -y \
     libmsgpack-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Build Neovim from source (latest stable) - do this early for better caching
+RUN git clone --depth 1 --branch stable https://github.com/neovim/neovim.git /tmp/neovim && \
+    cd /tmp/neovim && \
+    make CMAKE_BUILD_TYPE=Release && \
+    make install && \
+    rm -rf /tmp/neovim
+
 # Database clients (occasionally change)
 RUN apt-get update && apt-get install -y \
     postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Playwright browser dependencies (required for Chromium, Firefox, WebKit)
+RUN apt-get update && apt-get install -y \
+    libnspr4 \
+    libnss3 \
+    libgstreamer1.0-0 \
+    libgstreamer-plugins-base1.0-0 \
+    libgstreamer-plugins-bad1.0-0 \
+    libgstreamer-gl1.0-0 \
+    libgtk-4-1 \
+    libgraphene-1.0-0 \
+    libxslt1.1 \
+    libwoff1 \
+    libvpx7 \
+    libevent-2.1-7 \
+    libflite1 \
+    libharfbuzz-icu0 \
+    libenchant-2-2 \
+    libsecret-1-0 \
+    libhyphen0 \
+    libmanette-0.2-0 \
+    libgles2 \
+    libx264-164 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libxkbcommon0 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2 \
+    libatspi2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # XFCE Desktop and TigerVNC for browser monitoring (browser-use-mcp-server approach)
@@ -113,17 +158,6 @@ RUN LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygi
     tar xf lazygit.tar.gz lazygit && \
     install lazygit /usr/local/bin && \
     rm -f lazygit.tar.gz lazygit
-
-# Build Neovim from source (latest stable)
-RUN git clone --depth 1 --branch stable https://github.com/neovim/neovim.git /tmp/neovim && \
-    cd /tmp/neovim && \
-    make CMAKE_BUILD_TYPE=Release && \
-    make install && \
-    rm -rf /tmp/neovim
-
-# Install Playwright and Chromium browser as root (needs sudo privileges)
-RUN npm install -g playwright && \
-    npx playwright install --with-deps chromium
 
 # Switch to devvy user
 USER devvy
