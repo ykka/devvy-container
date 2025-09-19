@@ -85,4 +85,7 @@ iptables -A INPUT -p tcp --dport 3000:3010 -j ACCEPT
 iptables -A INPUT -p tcp --dport 22 -j ACCEPT
 iptables -A INPUT -p udp --dport 60000:60010 -j ACCEPT
 
+# Allow VNC for browser monitoring
+iptables -A INPUT -p tcp --dport 5900 -j ACCEPT
+
 echo "Firewall configured"
