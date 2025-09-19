@@ -11,12 +11,11 @@ services:
     cap_add:
       - NET_ADMIN # For firewall rules
       - NET_RAW # For iptables
-    security_opt:
-      - no-new-privileges:true
+      - SYS_ADMIN # For sudo and system administration
     ports:
       - "2222:22" # SSH
       - "60000-60010:60000-60010/udp" # Mosh
-      - "3000-3010:3000-3010" # Dev servers (Node.js, React, Vue, etc.)
+      - "3000-3003:3000-3003" # Dev servers (Node.js, React, Vue, etc.)
       - "443:443" # HTTPS/TLS
       - "8443:8443" # Alternative HTTPS port
       - "8080-8090:8080-8090" # WebSocket and alternative HTTP servers

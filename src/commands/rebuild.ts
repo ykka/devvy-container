@@ -9,6 +9,7 @@ import chalk from 'chalk';
 interface RebuildOptions {
   noCache?: boolean;
   force?: boolean;
+  acceptAll?: boolean;
 }
 
 export async function rebuildCommand(options: RebuildOptions): Promise<void> {
@@ -19,7 +20,8 @@ export async function rebuildCommand(options: RebuildOptions): Promise<void> {
     const isRunning = await docker.isContainerRunning(containerName);
 
     if (isRunning && !options.force) {
-      const shouldStop = await prompt.confirm('Container is running. Stop it before rebuilding?', true);
+      const shouldStop =
+        options.acceptAll || (await prompt.confirm('Container is running. Stop it before rebuilding?', true));
       if (!shouldStop) {
         logger.info('Rebuild cancelled');
         return;

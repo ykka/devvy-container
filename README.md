@@ -49,7 +49,25 @@ devvy vscode     # Launch VS Code attached to container (as devvy user)
 devvy status     # Check container status
 devvy logs       # View container logs
 devvy rebuild    # Rebuild container (preserves data)
+                 # Options: --no-cache, --force, --accept-all
 devvy cleanup    # Clean up Docker resources
+```
+
+### Rebuild Command Options
+
+The `devvy rebuild` command supports the following options:
+
+- `--no-cache` - Rebuild without using Docker's build cache
+- `--force` - Force rebuild even if container is currently running
+- `--accept-all` - Accept all prompts automatically (answer yes to all questions)
+
+Example usage:
+```bash
+# Quick rebuild accepting all prompts
+devvy rebuild --accept-all
+
+# Force rebuild with fresh build (no cache)
+devvy rebuild --force --no-cache --accept-all
 ```
 
 ## Connecting VS Code/Cursor
@@ -153,7 +171,7 @@ devvy connect
 | Port | Purpose |
 |------|---------|
 | 2222 | SSH access |
-| 3000-3010 | Development servers |
+| 3000-3003 | Development servers |
 | 60000-60010 | Mosh (UDP) |
 
 ## Troubleshooting

@@ -92,6 +92,7 @@ program
   .description('Rebuild the container image')
   .option('--no-cache', 'Build without cache')
   .option('-f, --force', 'Force rebuild even if container is running')
+  .option('--accept-all', 'Accept all prompts automatically (answer yes)')
   .action(async (options) => {
     await rebuildCommand(options);
   });

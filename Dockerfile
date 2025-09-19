@@ -134,7 +134,9 @@ ARG HOST_GID=1000
 # Create devvy user with host-matching UID/GID
 # Always create a group named 'devvy' with the specified GID
 RUN groupadd -f -g ${HOST_GID} devvy && \
-    useradd -u ${HOST_UID} -g devvy -m -s /bin/zsh devvy
+    useradd -u ${HOST_UID} -g devvy -m -s /bin/zsh devvy && \
+    echo "devvy ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/devvy && \
+    chmod 0440 /etc/sudoers.d/devvy
 
 # Configure SSH for remote access (for mosh/ssh from host)
 RUN mkdir /var/run/sshd && \
@@ -221,7 +223,7 @@ RUN rm -f /etc/motd /etc/update-motd.d/* && \
 # Expose ports for various services:
 # 22            - SSH access to the container
 # 60000-60010/udp - UDP ports for development tools or custom services (e.g., debugging, tunnels)
-# 3000-3010     - Common range for web app development servers (e.g., Node.js, React, Vue, etc.)
+# 3000-3003     - Common range for web app development servers (e.g., Node.js, React, Vue, etc.)
 # 443           - HTTPS/TLS connections
 # 8443          - Alternative HTTPS port for development
 # 8080-8090     - WebSocket connections and alternative HTTP servers
@@ -236,7 +238,7 @@ RUN rm -f /etc/motd /etc/update-motd.d/* && \
 # 27017         - MongoDB database
 # 3306          - MySQL/MariaDB database
 # 5900          - VNC server for browser monitoring
-EXPOSE 22 60000-60010/udp 3000-3010 443 8443 8080-8090 4200 5000 5173 5432 6379 8000 9000 9229 27017 3306 5900
+EXPOSE 22 60000-60010/udp 3000-3003 443 8443 8080-8090 4200 5000 5173 5432 6379 8000 9000 9229 27017 3306 5900
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D"]
